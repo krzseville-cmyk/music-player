@@ -209,12 +209,9 @@ public class MainActivity extends Activity implements MusicService.Listener {
     private Intent pendingIntent;
     private ImageButton favoriteButton;
     private ImageButton timerButton;
-    private View overview;
-    private TextView overviewTitle, overviewSubtitle, overviewLabel, overviewAction;
-    private TextView favoritesShortcut, historyShortcut, sectionTitle, sortLabel;
-    private ImageView overviewArt, nextArt;
+    private TextView sectionTitle, sortLabel;
+    private ImageView nextArt;
     private TextView nextTitle, nextSubtitle, playbackInfo;
-    private long overviewArtId = Long.MIN_VALUE;
     private long nextArtId = Long.MIN_VALUE;
     MusicService player() { return service; }
     List<Song> librarySongs() { return new ArrayList<>(allSongs); }
@@ -251,7 +248,6 @@ public class MainActivity extends Activity implements MusicService.Listener {
     private ListView listView;
     private GridView gridView;
     private TextView emptyView;
-    private TextView countView;
     private EditText searchBox;
     private final TextView[] tabViews = new TextView[TAB_NAMES.length];
     private View detailBar;
@@ -695,10 +691,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
             detail = new Nav(DETAIL_NONE, null, null, 0);
         }
         updateChrome();
-        updateOverview();
-        countView.setText(allSongs.size() + (allSongs.size() == 1 ? " song" : " songs")
-                + "  •  " + albums.size() + (albums.size() == 1 ? " album" : " albums")
-                + "  •  " + artists.size() + (artists.size() == 1 ? " artist" : " artists"));
+
 
         if (allSongs.isEmpty() && !(detail.type == DETAIL_NONE && tab == TAB_PLAYLISTS)) {
             showEmpty(libraryMessage, true);
@@ -797,8 +790,8 @@ public class MainActivity extends Activity implements MusicService.Listener {
     /** Updates the tab chips, search hint and the album / artist / playlist header bar. */
     private void updateChrome() {
         if (sectionTitle != null) sectionTitle.setText(detail.type == DETAIL_NONE
-                ? TAB_NAMES[tab].toUpperCase(Locale.ROOT) + "  /  " + sectionCount()
-                : "TRACKLIST");
+                ? TAB_NAMES[tab] + " · " + sectionCount()
+                : "Tracks");
         if (sortLabel != null) {
             String[] labels={"Title A–Z", "Title Z–A", "Artist", "Album", "Date added", "Duration"};
             sortLabel.setText(labels[Math.max(0,Math.min(labels.length-1,preferences.sort()))] + "  ↓");
@@ -1092,7 +1085,6 @@ public class MainActivity extends Activity implements MusicService.Listener {
         queueCount.setText(qs + (qs == 1 ? " song" : " songs"));
 
         Song s = service.getCurrentSong();
-        updateOverview();
         if (s == null) {
             if(npLyrics!=null)npLyrics.bind(null);boundLyricsUri="";
             miniPlayer.setVisibility(View.GONE);
@@ -1239,14 +1231,6 @@ public class MainActivity extends Activity implements MusicService.Listener {
         return (min / 60) + " hr " + (min % 60) + " min";
     }
 
-    private TextView actionChip(String label, Runnable action) {
-        TextView chip = text(13, SUBTEXT, true);
-        chip.setText(label); chip.setGravity(Gravity.CENTER);
-        chip.setBackground(outlined(SURFACE,RecordArtwork.blend(SURFACE,TEXT,.10f),14));
-        chip.setOnClickListener(v -> action.run());
-        return chip;
-    }
-
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
         if (tools != null) tools.onResult(request, result, data);
@@ -1284,11 +1268,6 @@ public class MainActivity extends Activity implements MusicService.Listener {
         return allSongs.size();
     }
 
-    @Override public void onConfigurationChanged(android.content.res.Configuration configuration) {
-        super.onConfigurationChanged(configuration);
-        if (searchBox!=null) updateOverview();
-    }
-
     private void setRecordPlaceholder(ImageView view,Song song) {
         view.setImageTintList(null); view.setPadding(0,0,0,0);
         view.setScaleType(ImageView.ScaleType.CENTER_CROP);
@@ -1298,57 +1277,6 @@ public class MainActivity extends Activity implements MusicService.Listener {
     private void addActionCell(LinearLayout row,View child) {
         LinearLayout.LayoutParams cell=new LinearLayout.LayoutParams(0,dp(child instanceof ImageButton?48:46),1f);
         cell.setMargins(dp(3),0,dp(3),0); row.addView(child,cell);
-    }
-
-    private View buildOverview() {
-        LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(dp(20),dp(8),dp(20),dp(4));
-        LinearLayout card=new LinearLayout(this);card.setGravity(Gravity.CENTER_VERTICAL);
-        GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{RecordArtwork.blend(SURFACE,ACCENT,.16f),SURFACE});
-        gradient.setCornerRadius(dp(22));gradient.setStroke(dp(1),RecordArtwork.blend(SURFACE,ACCENT,.25f));
-        card.setBackground(gradient);card.setPadding(dp(16),dp(14),dp(14),dp(14));
-        LinearLayout words=new LinearLayout(this);words.setOrientation(LinearLayout.VERTICAL);
-        overviewLabel=text(10,ACCENT,true);overviewLabel.setLetterSpacing(.12f);
-        overviewTitle=text(19,TEXT,true);overviewTitle.setPadding(0,dp(5),0,dp(3));
-        overviewSubtitle=text(12,SUBTEXT,false);
-        overviewAction=text(12,ON_ACCENT,true);overviewAction.setGravity(Gravity.CENTER);overviewAction.setBackground(rounded(ACCENT,10));
-        overviewAction.setOnClickListener(v -> openOverview());
-        words.addView(overviewLabel);words.addView(overviewTitle);words.addView(overviewSubtitle);
-        LinearLayout.LayoutParams button=new LinearLayout.LayoutParams(dp(128),dp(36));button.topMargin=dp(10);words.addView(overviewAction,button);
-        card.addView(words,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1f));
-        overviewArt=new ImageView(this);overviewArt.setClipToOutline(true);overviewArt.setBackground(rounded(SURFACE2,16));
-        LinearLayout.LayoutParams art=new LinearLayout.LayoutParams(dp(100),dp(100));art.leftMargin=dp(12);card.addView(overviewArt,art);
-        box.addView(card);card.setOnClickListener(v -> openOverview());
-        LinearLayout shortcuts=new LinearLayout(this);shortcuts.setPadding(0,dp(8),0,0);
-        favoritesShortcut=actionChip("Favorites",() -> selectTab(TAB_FAVORITES));
-        historyShortcut=actionChip("Recently played",() -> selectTab(TAB_HISTORY));
-        addActionCell(shortcuts,favoritesShortcut);addActionCell(shortcuts,historyShortcut);box.addView(shortcuts);
-        overview=box;return box;
-    }
-
-    private void openOverview() {
-        if (service==null) return;
-        if (service.getCurrentSong()!=null) { if (!service.isActive()) service.play(); showNowPlaying(); }
-        else if (!allSongs.isEmpty()) { play(preferences.sorted(allSongs),0);showNowPlaying(); }
-    }
-
-    private void updateOverview() {
-        if (overview==null) return;
-        boolean show=detail.type==DETAIL_NONE && tab==TAB_SONGS && query().isEmpty()
-                && getResources().getConfiguration().screenHeightDp>=680 && !allSongs.isEmpty();
-        overview.setVisibility(show ? View.VISIBLE : View.GONE);
-        if (!show) return;
-        Song current=service==null ? null : service.getCurrentSong();
-        Song featured=current==null ? preferences.sorted(allSongs).get(0) : current;
-        overviewLabel.setText(current==null ? "FROM YOUR COLLECTION" : "CONTINUE LISTENING");
-        overviewTitle.setText(featured.title);overviewSubtitle.setText(featured.artist);
-        overviewAction.setText(current==null ? "Play collection  ›" : service.isActive() ? "Open player  ›" : "Resume  ›");
-        if (overviewArtId!=featured.id) { overviewArtId=featured.id;bindArt(overviewArt,featured,GRID_ART_PX,R.drawable.ic_album,0); }
-        int favorites=0,recent=0;
-        for(Song song:allSongs){if(preferences.favorite(song)) favorites++;if(preferences.last(song)>0)recent++;}
-        favoritesShortcut.setText("♥  Favorites  ·  "+favorites);
-        historyShortcut.setText("↻  Recent  ·  "+recent);
     }
 
     private View buildNextTrack() {
@@ -1479,9 +1407,11 @@ public class MainActivity extends Activity implements MusicService.Listener {
     }
 
     private void styleTab(TextView t, boolean selected) {
-        t.setBackground(selected ? outlined(ACCENT,ACCENT,14) : outlined(SURFACE,RecordArtwork.blend(SURFACE,TEXT,.08f),14));
-        t.setTextColor(selected ? ON_ACCENT : TEXT);
-        t.setTypeface(selected ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+        android.graphics.drawable.LayerDrawable background=new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{
+                new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT),new android.graphics.drawable.ColorDrawable(selected?ACCENT:Color.TRANSPARENT)});
+        background.setLayerHeight(1,dp(2));background.setLayerGravity(1,Gravity.BOTTOM);
+        t.setBackground(background);t.setTextColor(selected?TEXT:SUBTEXT);
+        t.setTypeface(selected?Typeface.DEFAULT_BOLD:Typeface.DEFAULT);t.setSelected(selected);
     }
 
     /** An ImageView that stays square, fitting inside the space it is given. */
@@ -1526,42 +1456,29 @@ public class MainActivity extends Activity implements MusicService.Listener {
         header.setOrientation(LinearLayout.VERTICAL);
         header.setPadding(dp(20), dp(12), dp(20), dp(4));
 
-        TextView title = text(28, TEXT, true);
-        TextView eyebrow = text(11, ACCENT, true);
-        eyebrow.setText("YOUR OFFLINE COLLECTION");
-        eyebrow.setLetterSpacing(0.15f);
-        eyebrow.setPadding(0, 0, 0, dp(8));
-        header.addView(eyebrow);
+        TextView title = text(24, TEXT, true);
         LinearLayout titleRow = new LinearLayout(this);
         titleRow.setGravity(Gravity.CENTER_VERTICAL);
-        title.setText("Your library.");
-        title.setTextSize(34);
-        title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        titleRow.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        ImageButton settings = iconButton(R.drawable.ic_settings, 48, TEXT);
-        settings.setBackground(rounded(SURFACE, 16));
-        settings.setContentDescription("Library settings");
-        settings.setOnClickListener(v -> tools.settings());
-        titleRow.addView(settings);
-        header.addView(titleRow);
-
-        countView = text(13, SUBTEXT, false);
-        countView.setPadding(0, dp(4), 0, dp(4));
-        header.addView(countView);
+        title.setText("Simple Player");
+        titleRow.addView(title,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1f));
+        ImageButton settings=iconButton(R.drawable.ic_settings,48,TEXT);
+        settings.setContentDescription("Library settings");settings.setOnClickListener(v->tools.settings());
+        titleRow.addView(settings);header.addView(titleRow);
 
         searchBox = new EditText(this);
         searchBox.setHintTextColor(SUBTEXT);
         searchBox.setTextColor(TEXT);
         searchBox.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         searchBox.setSingleLine(true);
-        searchBox.setBackground(outlined(SURFACE,RecordArtwork.blend(SURFACE,TEXT,.08f),16));
+        searchBox.setBackground(rounded(SURFACE,12));
+        searchBox.setMinHeight(dp(48));
         searchBox.setPadding(dp(16), dp(10), dp(16), dp(10));
         searchBox.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_search, 0, 0, 0);
         searchBox.setCompoundDrawableTintList(ColorStateList.valueOf(SUBTEXT));
         searchBox.setCompoundDrawablePadding(dp(10));
         LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        sp.topMargin = dp(12);
+        sp.topMargin = dp(6);
         header.addView(searchBox, sp);
         main.addView(header);
 
@@ -1570,12 +1487,13 @@ public class MainActivity extends Activity implements MusicService.Listener {
         tabScroll.setHorizontalScrollBarEnabled(false);
         LinearLayout tabs = new LinearLayout(this);
         tabs.setOrientation(LinearLayout.HORIZONTAL);
-        tabs.setPadding(dp(16), dp(10), dp(16), dp(6));
+        tabs.setPadding(dp(12),dp(2),dp(12),0);
         for (int i = 0; i < TAB_NAMES.length; i++) {
             final int t = i;
             TextView chip = text(14, TEXT, false);
             chip.setText(TAB_NAMES[i]);
-            chip.setPadding(dp(16), dp(8), dp(16), dp(8));
+            chip.setPadding(dp(12),dp(8),dp(12),dp(8));
+            chip.setMinHeight(dp(48));chip.setGravity(Gravity.CENTER);
             chip.setOnClickListener(v -> selectTab(t));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -1585,13 +1503,12 @@ public class MainActivity extends Activity implements MusicService.Listener {
         }
         tabScroll.addView(tabs);
         main.addView(tabScroll);
-        main.addView(buildOverview());
         LinearLayout toolbar = new LinearLayout(this);
         toolbar.setPadding(dp(20), dp(2), dp(16), dp(2));
         toolbar.setGravity(Gravity.CENTER_VERTICAL);
-        TextView offline = text(11, SUBTEXT, true);
+        TextView offline = text(13, SUBTEXT, false);
         sectionTitle=offline;
-        offline.setText("SONGS"); offline.setLetterSpacing(0.1f);
+        offline.setText("Songs");
         toolbar.addView(offline, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         TextView sort = text(12, ACCENT, true);
         sortLabel=sort;
@@ -1721,8 +1638,8 @@ public class MainActivity extends Activity implements MusicService.Listener {
     private View buildMiniPlayer() {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackground(outlined(SURFACE2,RecordArtwork.blend(SURFACE2,ACCENT,.22f),22));
-        card.setElevation(dp(6));
+        card.setBackground(outlined(SURFACE,RecordArtwork.blend(SURFACE,TEXT,.10f),14));
+        card.setElevation(dp(2));
         card.setClipToOutline(true);
         card.setVisibility(View.GONE);
         card.setOnClickListener(v -> showNowPlaying());
@@ -1731,7 +1648,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(10), dp(8), dp(6), dp(8));
+        row.setPadding(dp(10),dp(6),dp(6),dp(6));
 
         miniArt = new ImageView(this);
         miniArt.setBackground(rounded(SURFACE2, 8));
@@ -1747,11 +1664,10 @@ public class MainActivity extends Activity implements MusicService.Listener {
         titles.addView(miniArtist);
         row.addView(titles, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        miniPlay = iconButton(R.drawable.ic_play, 44, ON_ACCENT);
-        miniPlay.setBackground(oval(ACCENT));
+        miniPlay = iconButton(R.drawable.ic_play,48,TEXT);
         miniPlay.setOnClickListener(v -> { if (service != null) service.toggle(); });
         row.addView(miniPlay);
-        ImageButton miniNext = iconButton(R.drawable.ic_next, 44, TEXT);
+        ImageButton miniNext = iconButton(R.drawable.ic_next,48,TEXT);
         miniNext.setOnClickListener(v -> { if (service != null) service.next(); });
         row.addView(miniNext);
         card.addView(row);
@@ -1760,7 +1676,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
         miniProgress.setProgressTintList(ColorStateList.valueOf(ACCENT));
         miniProgress.setProgressBackgroundTintList(ColorStateList.valueOf(SURFACE));
         miniProgress.setIndeterminate(false);
-        card.addView(miniProgress, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(3)));
+        card.addView(miniProgress, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(2)));
 
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -2061,7 +1977,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setMinimumHeight(dp(82));
+        row.setMinimumHeight(dp(72));
 
         Holder h = new Holder();
         h.drag = new ImageView(this);
@@ -2077,13 +1993,13 @@ public class MainActivity extends Activity implements MusicService.Listener {
         h.duration.setGravity(Gravity.CENTER);
         h.art = new ImageView(this);
         h.art.setClipToOutline(true);
-        row.addView(h.art, new LinearLayout.LayoutParams(dp(52), dp(52)));
+        row.addView(h.art, new LinearLayout.LayoutParams(dp(48), dp(48)));
 
         LinearLayout texts = new LinearLayout(this);
         texts.setOrientation(LinearLayout.VERTICAL);
         texts.setPadding(dp(14), 0, dp(4), 0);
         h.title = text(15, TEXT, false);
-        h.subtitle = text(13, SUBTEXT, false);
+        h.subtitle = text(12, SUBTEXT, false);
         texts.addView(h.title);
         texts.addView(h.subtitle);
         row.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
@@ -2142,6 +2058,9 @@ public class MainActivity extends Activity implements MusicService.Listener {
             View row = convertView != null ? convertView : newItemRow(parent);
             final Holder h = (Holder) row.getTag();
             h.position = position;
+            row.setMinimumHeight(dp(o instanceof Action?56:72));
+            int artSize=dp(o instanceof Action?40:48);
+            h.art.setLayoutParams(new LinearLayout.LayoutParams(artSize,artSize));
 
             boolean draggable = detail.type == DETAIL_PLAYLIST && query().isEmpty() && o instanceof Song;
             h.drag.setVisibility(draggable ? View.VISIBLE : View.GONE);
@@ -2162,7 +2081,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
                 Song s = (Song) o;
                 Song current = service != null ? service.getCurrentSong() : null;
                 boolean active = current != null && current.uri.equals(s.uri);
-                boolean numbered=detail.type==DETAIL_ALBUM || detail.type==DETAIL_PLAYLIST || (detail.type==DETAIL_NONE && (tab==TAB_SONGS || tab==TAB_FAVORITES));
+                boolean numbered=detail.type==DETAIL_ALBUM || detail.type==DETAIL_PLAYLIST;
                 h.number.setVisibility(numbered ? View.VISIBLE : View.GONE);
                 h.number.setText(active && service.isActive() ? "Ⅱ" : String.format(Locale.US,"%02d",position+1-(detail.type==DETAIL_NONE && tab==TAB_SONGS && query().isEmpty()?1:0)));
                 h.number.setTextColor(active ? TEXT : SUBTEXT);
@@ -2170,13 +2089,12 @@ public class MainActivity extends Activity implements MusicService.Listener {
                 h.duration.setVisibility(View.VISIBLE);
                 h.duration.setText(formatTime(s.duration));
                 if (active) row.setBackground(outlined(RecordArtwork.blend(BG,ACCENT,.08f),RecordArtwork.blend(BG,ACCENT,.18f),14));
-                h.title.setText((preferences.favorite(s) ? "♥  " : "") + s.title);
+                h.title.setText(s.title);
                 h.title.setTextColor(TEXT);
                 h.title.setTypeface(active ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
                 String sub = detail.type == DETAIL_ARTIST
                         ? (s.album.isEmpty() ? "Unknown album" : s.album) : s.artist;
-                if (detail.type == DETAIL_ALBUM && s.track > 0) sub = (s.track % 1000) + ".  " + sub;
-                h.subtitle.setText(sub + (s.album.isEmpty() || detail.type==DETAIL_ALBUM || detail.type==DETAIL_ARTIST ? "" : "  ·  " + s.album));
+                h.subtitle.setText(sub);
                 bindArt(h.art, s, LIST_ART_PX, R.drawable.ic_music, dp(12));
             } else if (o instanceof Album) {
                 Album a = (Album) o;
@@ -2188,7 +2106,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
                 h.title.setText(a.name);
                 h.subtitle.setText(a.albumCount + (a.albumCount == 1 ? " album" : " albums") + "  •  "
                         + a.songs.size() + (a.songs.size() == 1 ? " song" : " songs"));
-                h.art.setBackground(oval(SURFACE));
+                h.art.setBackground(null);
                 bindArt(h.art, a.songs.get(0), LIST_ART_PX, R.drawable.ic_person, dp(12));
             } else if (o instanceof PlaylistStore.Playlist) {
                 PlaylistStore.Playlist p = (PlaylistStore.Playlist) o;
@@ -2204,7 +2122,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
                 h.subtitle.setVisibility(View.GONE);
                 h.action.setVisibility(View.GONE);
                 h.art.setTag(null);
-                h.art.setBackground(oval(SURFACE));
+                h.art.setBackground(null);
                 setPlaceholder(h.art, a.icon, dp(12));
                 h.art.setImageTintList(ColorStateList.valueOf(ACCENT));
             }

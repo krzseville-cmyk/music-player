@@ -38,6 +38,7 @@ public final class PlayerIntegrationTests extends Instrumentation {
         };
         try {
             if(arguments!=null&&"themes".equals(arguments.getString("phase")))new LibraryPreferences(getTargetContext()).theme("ember");
+            if(arguments!=null&&"design".equals(arguments.getString("phase")))new LibraryPreferences(getTargetContext()).theme("purple");
             if(arguments!=null&&"lyrics".equals(arguments.getString("phase"))){
                 android.content.SharedPreferences prefs=getTargetContext().getSharedPreferences("library",0);
                 prefs.edit().remove("lyrics:"+Uri.fromFile(new File(getTargetContext().getFilesDir(),"01 Sunset Drive.mp3")))
@@ -410,19 +411,18 @@ public final class PlayerIntegrationTests extends Instrumentation {
         runOnMainSync(()->ArtLoader.load(getTargetContext(),songs.get(0),320,bitmap->{art.set(bitmap);artReady.countDown();}));
         if(!artReady.await(30,TimeUnit.SECONDS)||art.get()==null)throw new AssertionError("embedded MP3 cover loads through fallback");checks++;
         preview(activity,songs,false);
-        check(()->((View)field(activity,"overview")).getVisibility()==View.VISIBLE,"continue-listening card visible");
-        check(()->((TextView)field(activity,"overviewTitle")).getText().toString().equals(songs.get(0).title),"continue card shows actual track");
+        check(()->((View)field(activity,"miniPlayer")).getVisibility()==View.VISIBLE,"compact player remains accessible");
+        check(()->((TextView)field(activity,"miniTitle")).getText().toString().equals(songs.get(0).title),"compact player shows actual track");
         check(()->((TextView)field(activity,"nextTitle")).getText().toString().contains(songs.get(1).title),"up-next panel matches queue");
-        runOnMainSync(()->((View)field(activity,"overviewAction")).performClick());
-        waitFor(()->player.isPlaying(),"resume card resumes playback");
-        check(()->((View)field(activity,"npView")).getVisibility()==View.VISIBLE,"resume opens player");
-        runOnMainSync(()->{player.pause();invoke(activity,"hideOverlays");((View)field(activity,"favoritesShortcut")).performClick();});
-        check(()->((Integer)field(activity,"tab"))==2,"favorites shortcut navigates");
-        check(()->((View)field(activity,"overview")).getVisibility()==View.GONE,"overview hidden in favorites");
-        runOnMainSync(()->{
-            try {java.lang.reflect.Method select=MainActivity.class.getDeclaredMethod("selectTab",int.class);select.setAccessible(true);select.invoke(activity,0);}
-            catch(Exception e){throw new RuntimeException(e);}
-        });
+        runOnMainSync(()->((View)field(activity,"miniPlayer")).performClick());
+        check(()->((View)field(activity,"npView")).getVisibility()==View.VISIBLE,"compact player opens Now Playing");
+        runOnMainSync(()->{invoke(activity,"hideOverlays");((View)field(activity,"miniPlay")).performClick();});
+        waitFor(()->player.isPlaying(),"compact play button resumes music");
+        runOnMainSync(()->{player.pause();((TextView[])field(activity,"tabViews"))[2].performClick();});
+        check(()->((Integer)field(activity,"tab"))==2,"favorites remains accessible through navigation");
+        runOnMainSync(()->((TextView[])field(activity,"tabViews"))[6].performClick());
+        check(()->((Integer)field(activity,"tab"))==6,"history remains accessible through navigation");
+        runOnMainSync(()->((TextView[])field(activity,"tabViews"))[0].performClick());
         preview(activity,songs,false);preview(activity,songs,true);
     }
     private void preview(MainActivity activity,List<Song> songs,boolean nowPlaying) throws Exception {

@@ -13,7 +13,7 @@ New-Item -ItemType Directory -Force "$out\gen", "$out\classes", "$out\dex" | Out
 Get-ChildItem "$out\gen", "$out\classes", "$out\dex" -Recurse -File | Remove-Item
 Run "$bt\aapt2.exe" @("compile", "--dir", "res", "-o", "$out\res.zip")
 Run "$bt\aapt2.exe" @("link", "-o", "$out\unsigned.apk", "-I", $jar, "--manifest", "AndroidManifest.xml", "--java", "$out\gen",
-    "--min-sdk-version", "24", "--target-sdk-version", "35", "--version-code", "14", "--version-name", "4.1", "$out\res.zip")
+    "--min-sdk-version", "24", "--target-sdk-version", "35", "--version-code", "15", "--version-name", "4.2", "$out\res.zip")
 $sources = Get-ChildItem "src", "$out\gen" -Recurse -Filter *.java | ForEach-Object { $_.FullName }
 Run "javac" (@("-source", "8", "-target", "8", "-bootclasspath", "$jar;$bt\core-lambda-stubs.jar", "-encoding", "UTF-8", "-Xlint:-options", "-d", "$out\classes") + $sources)
 Run "jar" @("cf", "$out\classes.jar", "-C", "$out\classes", ".")
