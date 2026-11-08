@@ -4,6 +4,12 @@ A native local-music player for Android 7.0 (API 24) or newer. Playback and save
 
 [Download Simple Player](<dist/Simple Player.apk>) · [Lyrics preview](docs/screenshots/now-playing-lyrics-v3.6.png) · [Theme previews](docs/THEMES.md)
 
+## Version 3.7 · Simple playback controls
+
+- Now Playing uses a gold play / pause icon without the filled circular background. The large touch target and press feedback remain.
+- Version **3.7**, code **10**; app name, package, and signing identity unchanged.
+- The linked lyrics preview shows the earlier button styling.
+
 ## Version 3.6 · Lyrics in Now Playing
 
 - Lyrics display directly in the Now Playing artwork area; tap **Cover** to return to album art or **Lyrics** to bring the words back. Available saved / embedded lyrics open automatically until you choose Cover.

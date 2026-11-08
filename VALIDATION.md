@@ -1,3 +1,11 @@
+# Version 3.7 · Simple play / pause button
+
+- Now Playing's central play / pause control uses the theme's gold text tint and the standard borderless press feedback. Removed its filled circular background; retained the 72 dp touch target and existing playback listener / state updates.
+- Resource / Java / DEX compilation, APK alignment, and signature verification passed. APK metadata confirms `simple.music.player`, version **3.7**, code **10**, minimum API **24**, target API **35**.
+- The signing certificate is unchanged: `3fb413c86beccc6627a4c3be5de0a8cb4bfc15715d03ebbf2d02ab85ff037c73`.
+- APK SHA-256: `35179c7978383d88381abd51ca61a9db117b6d5b0ac9947132089e1965462edb`.
+- This appearance-only change was built and inspected in source. No new emulator or physical-device run was performed; earlier screenshots and functional test results below describe their stated versions.
+
 # Version 3.6 · Now Playing lyrics validation
 
 - Resource / Java / DEX compilation, APK alignment, and signature verification passed.

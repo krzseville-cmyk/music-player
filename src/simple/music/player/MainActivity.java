@@ -1860,8 +1860,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
         controls.setWeightSum(5);
         npShuffle = iconButton(R.drawable.ic_shuffle, 48, SUBTEXT);
         ImageButton prev = iconButton(R.drawable.ic_prev, 56, TEXT);
-        npPlay = iconButton(R.drawable.ic_play, 72, ON_ACCENT);
-        npPlay.setBackground(oval(ACCENT));
+        npPlay = iconButton(R.drawable.ic_play, 72, TEXT);
         ImageButton next = iconButton(R.drawable.ic_next, 56, TEXT);
         npRepeat = iconButton(R.drawable.ic_repeat, 48, SUBTEXT);
         npShuffle.setOnClickListener(v -> { if (service != null) service.toggleShuffle(); });
