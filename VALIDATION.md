@@ -1,3 +1,14 @@
+# Version 4.2 · Simpler music library
+
+- Replaced the large library heading / statistics and Continue Listening section with a compact Simple Player heading, search, underlined tabs, and one count / sort toolbar. Favorites and History remain available in the category tabs; the bottom player provides resume and Now Playing access.
+- Song rows use 48 dp artwork, title / artist / duration, and the existing menu with 72 dp row height. Removed library row numbers and favorite prefixes; album / playlist details retain their numbered rows. Shuffle uses a smaller plain icon row. The compact player now has gold play / pause and next icons without a filled circle.
+- Resource / Java / DEX compilation, alignment, production signing, and instrumentation compilation passed. Metadata confirms `simple.music.player`, version **4.2**, code **15**, minimum API **24**, target API **35**.
+- **10 Android layout / navigation checks passed** on the API 35 emulator: fixture playback, embedded artwork, compact-player visibility / metadata, Up Next metadata, opening Now Playing, resuming through the compact play button, and Favorites / History navigation.
+- Native preview: [simplified library](docs/screenshots/library-v4.2.png), using synthetic tracks and artwork in the Amethyst theme. Production APK contains no test audio. Large-font, landscape, and physical-device layouts were not exercised for this change.
+- Playback, software processing, and file parsers are unchanged; their earlier results below are historical and were not rerun for this appearance update.
+- Signing certificate remains `3fb413c86beccc6627a4c3be5de0a8cb4bfc15715d03ebbf2d02ab85ff037c73`.
+- APK SHA-256: `0f900ac17dad2f8989425196a9a32d264a00d888917d9e14c9668a73f92629b9`.
+
 # Private signing workflow · Build infrastructure
 
 - Removed the original uploaded source ZIP from the current tracked files because it contained `musicplayer.keystore`. A private local backup was retained. No Git history was rewritten; the earlier key remains exposed through history / prior copies and requires a planned signing-key rotation. The distributed APK signing identity is unchanged.

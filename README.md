@@ -2,7 +2,14 @@
 
 A native local-music player for Android 7.0 (API 24) or newer. Playback and saved lyrics work offline; optional online lyrics lookup needs internet access. No account is required.
 
-[Download Simple Player](<dist/Simple Player.apk>) · [Lyrics preview](docs/screenshots/now-playing-lyrics-v3.6.png) · [Theme previews](docs/THEMES.md)
+[Download Simple Player](<dist/Simple Player.apk>) · [Library preview](docs/screenshots/library-v4.2.png) · [Lyrics preview](docs/screenshots/now-playing-lyrics-v3.6.png) · [Theme previews](docs/THEMES.md)
+
+## Version 4.2 · Simpler music library
+
+- Compact Simple Player heading, search, underlined category tabs, and a single count / sort toolbar put the song list first. Removed the large Continue Listening card and duplicate Favorites / Recent shortcut cards; those collections remain in the tabs.
+- Cleaner song rows show artwork, title, artist, duration, and the existing menu. Track numbers remain in album / playlist details. A smaller shuffle row and 72 dp song rows leave more music visible.
+- The persistent player keeps the current cover, title, artist, progress, and plain gold play / pause / next icons. Tap it to open Now Playing.
+- Version **4.2**, code **15**; package, themes, gold text, and signing identity unchanged. Playback / software audio processing are unchanged.
 
 ## Version 4.1 · Software effects for every app output route
 
