@@ -1,0 +1,80 @@
+name: Publish release assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing draft release tag (for example v1.0)
+        required: true
+      commit:
+        description: Full commit SHA containing the verified signed APK
+        required: true
+      apk_sha256:
+        description: Expected SHA-256 of dist/Simple Player.apk
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+      RELEASE_COMMIT: ${{ inputs.commit }}
+      APK_SHA256: ${{ inputs.apk_sha256 }}
+    steps:
+      - name: Validate release inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]
+          [[ "$RELEASE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$APK_SHA256" =~ ^[0-9a-f]{64}$ ]]
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.commit }}
+          persist-credentials: false
+      - name: Package verified release files
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s  %s\n' "$APK_SHA256" 'dist/Simple Player.apk' | sha256sum --check --strict
+          export RELEASE_DIR="$RUNNER_TEMP/simple-player-release"
+          mkdir -p "$RELEASE_DIR"
+          version="${RELEASE_TAG#v}"
+          cp 'dist/Simple Player.apk' "$RELEASE_DIR/Simple-Player-$version.apk"
+          git archive --format=zip --prefix='Simple Player/' -o "$RELEASE_DIR/Simple-Player-$version-source.zip" HEAD
+          python3 - <<'PY'
+          import os, zipfile
+          from pathlib import Path
+          source = next(Path(os.environ['RELEASE_DIR']).glob('*-source.zip'))
+          with zipfile.ZipFile(source) as archive:
+              for name in archive.namelist():
+                  path = Path(name)
+                  if path.suffix.lower() in {'.keystore', '.jks', '.p12', '.pfx', '.key', '.pem', '.b64', '.zip'} or path.name == '.env' or path.name.startswith('.env.'):
+                      raise SystemExit('Source archive contains a private or nested-archive file')
+          PY
+          cd "$RELEASE_DIR"
+          sha256sum ./*.apk ./*-source.zip > SHA256SUMS.txt
+      - name: Upload and publish the draft
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          release_json="$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft,targetCommitish,assets)"
+          export RELEASE_JSON="$release_json"
+          python3 - <<'PY'
+          import json, os
+          release = json.loads(os.environ['RELEASE_JSON'])
+          assert release['isDraft'], 'Refusing to replace a published release'
+          assert release['targetCommitish'] == os.environ['RELEASE_COMMIT'], 'Release target differs from verified commit'
+          assert not release['assets'], 'Refusing to overwrite existing release assets'
+          PY
+          gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/simple-player-release/"* --repo "$GITHUB_REPOSITORY"
+          gh release edit "$RELEASE_TAG" --draft=false --latest --repo "$GITHUB_REPOSITORY"
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json url --jq .url >> "$GITHUB_STEP_SUMMARY"

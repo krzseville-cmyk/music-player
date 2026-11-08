@@ -179,3 +179,7 @@ The literal `android` password in debug/test builds is Android's public debug co
 Device checks and screenshots are recorded in [VALIDATION.md](VALIDATION.md). Android Auto, physical Bluetooth / USB route changes, and physical-device audio quality require corresponding hardware / host testing. Equalizer and bass are now software filters.
 
 Software decoder tests: generate the existing synthetic MP3 assets with `python3 tests/make-fixtures.py` and the additional formats with `python3 tests/make-audio-fixtures.py` (ffmpeg required). Build instrumentation with `bash tests/android/build.sh`; run its `effects`, `formats`, and default phases on an Android emulator. Test assets stay under `build/fixtures` and are excluded from production builds.
+
+### Publishing release downloads
+
+The manual **Publish release assets** workflow uploads an already-signed `dist/Simple Player.apk` from a verified commit and publishes an existing draft release. Run it from **main** with the draft tag, the full commit SHA, and the APK's SHA-256. The draft's target commit must match, and it must have no assets yet. The job checks the APK hash and source archive, uploads the APK / source ZIP / checksums, then publishes. It uses GitHub's job token rather than signing secrets.
