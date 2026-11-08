@@ -1,3 +1,11 @@
+# Version 1.0 · Display-version change
+
+- Updated both build scripts to display version **1.0**. Internal Android version code increments to **17** to allow updates from the earlier builds.
+- Resource / Java / DEX compilation, alignment, and signature verification passed. APK metadata confirms `simple.music.player`, versionName `1.0`, versionCode `17`, minimum API 24, target API 35. About reads versionName from package metadata.
+- Existing signing certificate retained: `3fb413c86beccc6627a4c3be5de0a8cb4bfc15715d03ebbf2d02ab85ff037c73`.
+- APK SHA-256: `cecd8ebcc30691eb8e1f9c8828c4de4f05b2b909721d84b9a8cfd123952725c7`.
+- Version metadata only; app code and assets are unchanged, so runtime suites were not rerun. Earlier development-version sections below are historical.
+
 # Version 4.3 · Gold vinyl launcher icon
 
 - Replaced the black / red launcher record with a metallic gold vinyl design. Exported legacy icons at 48 / 72 / 96 / 144 / 192 px and adaptive foregrounds at 108 / 162 / 216 / 324 / 432 px with transparent padding. Adaptive dark background and launcher resource references are unchanged.
