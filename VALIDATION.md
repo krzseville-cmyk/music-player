@@ -1,3 +1,11 @@
+# Version 3.8 · Icon actions
+
+- Converted Now Playing's favorite, lyrics / cover, queue, and sleep-timer chips to native ImageButtons in a single row. Preserved click handlers, favorite state, lyrics toggle state, and accessible timer status. Each action has a 48 dp touch target, a descriptive accessibility label, and a tooltip on API 26+.
+- Resource / Java / DEX compilation, APK alignment, and signature verification passed. APK metadata confirms `simple.music.player`, version **3.8**, code **11**, minimum API **24**, target API **35**.
+- Certificate remains `3fb413c86beccc6627a4c3be5de0a8cb4bfc15715d03ebbf2d02ab85ff037c73`.
+- APK SHA-256: `ab4b13d75f86ce5230a3f3284883f3b9892351c33593a1dc510a5b376846067f`.
+- This UI change was built and reviewed in source; emulator and physical-device tests were not rerun. Existing screenshots and test results below describe their stated versions.
+
 # Version 3.7 · Simple play / pause button
 
 - Now Playing's central play / pause control uses the theme's gold text tint and the standard borderless press feedback. Removed its filled circular background; retained the 72 dp touch target and existing playback listener / state updates.

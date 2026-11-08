@@ -4,6 +4,13 @@ A native local-music player for Android 7.0 (API 24) or newer. Playback and save
 
 [Download Simple Player](<dist/Simple Player.apk>) · [Lyrics preview](docs/screenshots/now-playing-lyrics-v3.6.png) · [Theme previews](docs/THEMES.md)
 
+## Version 3.8 · Icon actions
+
+- Favorite, Lyrics / Cover, Queue, and Sleep timer now use gold icons in one compact row, with no text labels or filled button backgrounds.
+- Favorites switch between outlined and filled hearts. The lyrics action switches to a cover icon when lyrics are visible. Timer state remains available through its accessible label and long-press tooltip (Android 8+).
+- Actions retain 48 dp touch targets, press feedback, and screen-reader labels. Version **3.8**, code **11**; package and signing identity unchanged.
+- Existing preview images show earlier versions.
+
 ## Version 3.7 · Simple playback controls
 
 - Now Playing uses a gold play / pause icon without the filled circular background. The large touch target and press feedback remain.

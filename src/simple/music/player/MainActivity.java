@@ -150,7 +150,8 @@ public class MainActivity extends Activity implements MusicService.Listener {
     private LyricsRepository lyricsRepository;
     private NowPlayingLyrics npLyrics;
     private FrameLayout npArtBox;
-    private TextView npLyricsToggle,npLyricsHint;
+    private ImageButton npLyricsToggle;
+    private TextView npLyricsHint;
     private boolean lyricsForced;
     private String boundLyricsUri="";
     LyricsRepository lyricsRepository(){return lyricsRepository;}
@@ -173,7 +174,10 @@ public class MainActivity extends Activity implements MusicService.Listener {
     private void setLyricsVisible(boolean visible){
         if(npLyrics==null)return;
         npLyrics.setVisibility(visible?View.VISIBLE:View.GONE);npArt.setVisibility(visible?View.GONE:View.VISIBLE);
-        if(npLyricsToggle!=null)npLyricsToggle.setText(visible?"Cover":"Lyrics");
+        if(npLyricsToggle!=null){
+            npLyricsToggle.setImageResource(visible?R.drawable.ic_album:R.drawable.ic_lyrics);
+            describeAction(npLyricsToggle,visible?"Show cover":"Show lyrics");
+        }
         LinearLayout.LayoutParams params=(LinearLayout.LayoutParams)npArtBox.getLayoutParams();
         params.height=dp(visible?300:180);npArtBox.setLayoutParams(params);
         if(visible)npLyrics.reveal();
@@ -203,8 +207,8 @@ public class MainActivity extends Activity implements MusicService.Listener {
     private String selectedFolder;
     private boolean mostPlayed;
     private Intent pendingIntent;
-    private TextView favoriteButton;
-    private TextView timerButton;
+    private ImageButton favoriteButton;
+    private ImageButton timerButton;
     private View overview;
     private TextView overviewTitle, overviewSubtitle, overviewLabel, overviewAction;
     private TextView favoritesShortcut, historyShortcut, sectionTitle, sortLabel;
@@ -1137,8 +1141,10 @@ public class MainActivity extends Activity implements MusicService.Listener {
             });
         }
         if (favoriteButton != null) {
-            favoriteButton.setText(preferences.favorite(s) ? "♥ Saved" : "♡ Favorite");
-            favoriteButton.setTextColor(preferences.favorite(s) ? TEXT : SUBTEXT);
+            boolean saved=preferences.favorite(s);
+            favoriteButton.setImageResource(saved?R.drawable.ic_heart:R.drawable.ic_heart_outline);
+            favoriteButton.setSelected(saved);
+            describeAction(favoriteButton,saved?"Remove from favorites":"Add to favorites");
         }
         if (tab == TAB_HISTORY || tab == TAB_FAVORITES) refresh();
         updateProgress();
@@ -1147,7 +1153,12 @@ public class MainActivity extends Activity implements MusicService.Listener {
     private void updateProgress() {
         refreshSettings();
         if (service == null || service.getCurrentSong() == null) return;
-        if (timerButton != null) timerButton.setText("Off".equals(service.sleepDescription()) ? "Sleep timer" : service.sleepDescription());
+        if (timerButton != null) {
+            String timer=service.sleepDescription();boolean active=!"Off".equals(timer);
+            timerButton.setSelected(active);
+            timerButton.setImageTintList(ColorStateList.valueOf(active?TEXT:SUBTEXT));
+            describeAction(timerButton,active?"Sleep timer: "+timer:"Sleep timer: Off");
+        }
         int dur = Math.max(service.getDuration(), 1);
         int pos = service.getPosition();
         miniProgress.setMax(dur);
@@ -1285,7 +1296,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
     }
 
     private void addActionCell(LinearLayout row,View child) {
-        LinearLayout.LayoutParams cell=new LinearLayout.LayoutParams(0,dp(46),1f);
+        LinearLayout.LayoutParams cell=new LinearLayout.LayoutParams(0,dp(child instanceof ImageButton?48:46),1f);
         cell.setMargins(dp(3),0,dp(3),0); row.addView(child,cell);
     }
 
@@ -1419,6 +1430,18 @@ public class MainActivity extends Activity implements MusicService.Listener {
         lp.setMargins(dp(4), 0, dp(4), 0);
         b.setLayoutParams(lp);
         return b;
+    }
+
+    private ImageButton playerAction(int icon,String label,Runnable action) {
+        ImageButton button=iconButton(icon,48,TEXT);
+        describeAction(button,label);
+        button.setOnClickListener(v->action.run());
+        return button;
+    }
+
+    private void describeAction(View button,String label) {
+        button.setContentDescription(label);
+        if(android.os.Build.VERSION.SDK_INT>=26)button.setTooltipText(label);
     }
 
     private void setRipple(View v) {
@@ -1877,23 +1900,21 @@ public class MainActivity extends Activity implements MusicService.Listener {
 
         LinearLayout bottom = new LinearLayout(this);
         bottom.setGravity(Gravity.CENTER_VERTICAL);
-        favoriteButton = actionChip("♡ Favorite", () -> {
+        favoriteButton = playerAction(R.drawable.ic_heart_outline,"Add to favorites", () -> {
             if (service != null && service.getCurrentSong() != null) {
                 preferences.toggleFavorite(service.getCurrentSong()); repaint();
             }
         });
         addActionCell(bottom,favoriteButton);
-        npLyricsToggle=actionChip("Lyrics",()->{
+        npLyricsToggle=playerAction(R.drawable.ic_lyrics,"Show lyrics",()->{
             if(npLyrics.getVisibility()==View.VISIBLE)showCover();
             else if(service!=null&&service.getCurrentSong()!=null)showSongLyrics(service.getCurrentSong());
         });
         addActionCell(bottom,npLyricsToggle);
-        addActionCell(bottom,actionChip("Queue", this::showQueue));
+        addActionCell(bottom,playerAction(R.drawable.ic_queue,"Open queue",this::showQueue));
+        timerButton=playerAction(R.drawable.ic_timer,"Sleep timer: Off",()->tools.sleepTimer());
+        addActionCell(bottom,timerButton);
         col.addView(bottom);
-        timerButton = actionChip("Sleep timer", () -> tools.sleepTimer());
-        LinearLayout.LayoutParams timerLayout=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(40));
-        timerLayout.topMargin=dp(6);
-        col.addView(timerButton,timerLayout);
         col.addView(buildNextTrack());
 
         ScrollView scroll=new ScrollView(this);
