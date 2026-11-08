@@ -38,10 +38,17 @@ public final class PlayerIntegrationTests extends Instrumentation {
         };
         try {
             if(arguments!=null&&"themes".equals(arguments.getString("phase")))new LibraryPreferences(getTargetContext()).theme("ember");
+            if(arguments!=null&&"lyrics".equals(arguments.getString("phase"))){
+                android.content.SharedPreferences prefs=getTargetContext().getSharedPreferences("library",0);
+                prefs.edit().remove("lyrics:"+Uri.fromFile(new File(getTargetContext().getFilesDir(),"01 Sunset Drive.mp3")))
+                    .remove("lyrics:"+Uri.fromFile(new File(getTargetContext().getFilesDir(),"02 Blue Hour.mp3"))).commit();
+            }
             MainActivity activity = (MainActivity)startActivitySync(new Intent(getTargetContext(),MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             getTargetContext().bindService(new Intent(getTargetContext(),MusicService.class),connection,Context.BIND_AUTO_CREATE);
             waitFor(()->player!=null,"service binds");
-            if (arguments!=null && "identity".equals(arguments.getString("phase"))) {
+            if (arguments!=null && "lyrics".equals(arguments.getString("phase"))) {
+                lyricsPreview(activity);
+            } else if (arguments!=null && "identity".equals(arguments.getString("phase"))) {
                 identity(activity);
             } else if (arguments!=null && "themes".equals(arguments.getString("phase"))) {
                 themePreview(activity);
@@ -121,6 +128,55 @@ public final class PlayerIntegrationTests extends Instrumentation {
     private Object field(MainActivity activity,String name) {
         try { java.lang.reflect.Field field=MainActivity.class.getDeclaredField(name);field.setAccessible(true);return field.get(activity); }
         catch(Exception e){throw new RuntimeException(e);}
+    }
+    private boolean hasText(View parent,String text){java.util.ArrayList<View> matches=new java.util.ArrayList<>();parent.findViewsWithText(matches,text,View.FIND_VIEWS_WITH_TEXT);return !matches.isEmpty();}
+    private View textView(View parent,String text){java.util.ArrayList<View> matches=new java.util.ArrayList<>();parent.findViewsWithText(matches,text,View.FIND_VIEWS_WITH_TEXT);if(matches.isEmpty())throw new AssertionError("Missing "+text);return matches.get(0);}
+    private void lyricsPreview(MainActivity activity) throws Exception {
+        List<Song> songs=privateFixtures();Song a=songs.get(0),b=songs.get(1);
+        String lrc="[ar:Studio Sessions]\n[00:00.00]A little light across the room\n[00:02.00]We let the quiet carry through\n[00:04.00]Gold on the edge of something new\n[00:06.00]And all the roads are leading home\n[00:10.00]The night turns into morning blue\n[00:14.00]One final note to follow through";
+        File file=new File(getTargetContext().getFilesDir(),"test-lyrics.lrc");
+        try(OutputStream out=new FileOutputStream(file)){out.write(new byte[]{(byte)255,(byte)254});out.write(lrc.getBytes(java.nio.charset.StandardCharsets.UTF_16LE));}
+        android.content.SharedPreferences prefs=getTargetContext().getSharedPreferences("library",0);
+        prefs.edit().putString("lyrics:"+a.uri,Uri.fromFile(file).toString()).remove("lyrics:"+b.uri).putBoolean("lyricsOnPlayer",true).commit();
+        runOnMainSync(()->{player.setCrossfade(0);player.playQueue(songs,0);});waitFor(()->player.isPlaying(),"lyrics fixture plays");runOnMainSync(player::pause);
+        NowPlayingLyrics panel=(NowPlayingLyrics)field(activity,"npLyrics");
+        runOnMainSync(()->invoke(activity,"showNowPlaying"));
+        waitFor(panel::hasLyrics,"UTF-16 linked lyrics load");
+        check(()->panel.getVisibility()==View.VISIBLE,"lyrics automatically display inside Now Playing");
+        check(()->((View)field(activity,"npArt")).getVisibility()==View.GONE,"lyrics share the cover area");
+        check(()->hasText(panel,"A little light across the room"),"actual lyric text is displayed");
+        runOnMainSync(()->player.seekTo(5500));waitFor(()->panel.activeLine()==2,"highlight follows playback seek");
+        capture("preview-now-playing-lyrics.png");
+        runOnMainSync(()->textView(panel,"We let the quiet carry through").performClick());
+        waitFor(()->player.getPosition()>=1900&&player.getPosition()<3500&&panel.activeLine()==1,"tapping a line seeks to its timestamp");
+        check(()->!player.isPlaying(),"line seek keeps paused audio paused");
+        runOnMainSync(activity::showCover);
+        check(()->panel.getVisibility()==View.GONE&&((View)field(activity,"npArt")).getVisibility()==View.VISIBLE,"cover toggle restores artwork");
+        runOnMainSync(()->activity.showSongLyrics(a));
+        check(()->panel.getVisibility()==View.VISIBLE,"lyrics toggle returns inline");
+        runOnMainSync(()->player.playAt(1));waitFor(()->player.isPlaying()&&panel.songUri().equals(b.uri.toString()),"lyrics follow track changes");runOnMainSync(player::pause);
+        runOnMainSync(()->activity.showSongLyrics(b));
+        waitFor(()->hasText(panel,"No lyrics saved for this song."),"missing lyrics show an actionable empty state");
+        check(()->!hasText(panel,"A little light across the room")&&!panel.hasLyrics(),"previous song lyrics are cleared");
+        check(()->hasText(panel,"Find online")&&hasText(panel,"Add file"),"empty state offers lookup and file attachment");
+        PlayerTools tools=(PlayerTools)field(activity,"tools");
+        prefs.edit().putString("lyricsTarget",a.uri.toString()).remove("lyrics:"+a.uri).commit();
+        runOnMainSync(()->tools.onResult(42,android.app.Activity.RESULT_OK,new Intent().setData(Uri.fromFile(file)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)));
+        waitFor(()->prefs.getString("lyrics:"+a.uri,"").equals(Uri.fromFile(file).toString()),"file result is associated with its requested song");
+        check(()->panel.songUri().equals(b.uri.toString())&&!panel.hasLyrics(),"attaching a different song does not overwrite current lyrics");
+        prefs.edit().putString("lyrics:"+b.uri,"file:///missing-simple-player-lyrics.lrc").commit();
+        runOnMainSync(()->activity.reloadLyricsFor(b.uri.toString()));
+        waitFor(()->hasText(panel,"The linked lyrics file is unavailable."),"unavailable file gives a clear recovery message");
+        File plain=new File(getTargetContext().getFilesDir(),"plain-lyrics.txt");try(OutputStream out=new FileOutputStream(plain)){out.write("Plain words without timing\nA second line to read".getBytes(java.nio.charset.StandardCharsets.UTF_8));}
+        prefs.edit().putString("lyrics:"+b.uri,Uri.fromFile(plain).toString()).commit();runOnMainSync(()->activity.reloadLyricsFor(b.uri.toString()));
+        waitFor(()->panel.hasLyrics()&&hasText(panel,"Plain words without timing"),"plain lyrics display without timed metadata");
+        check(()->hasText(panel,"Plain lyrics"),"plain lyrics are labelled accurately");capture("preview-now-playing-plain-lyrics.png");
+        org.json.JSONObject json=new org.json.JSONObject().put("syncedLyrics","[00:01]Fixture words").put("plainLyrics","Fallback words");
+        check(()->LyricsRepository.fromResponse(json).text.startsWith("[00:01]"),"online response prefers synced lyrics");
+        org.json.JSONObject fallback=new org.json.JSONObject().put("syncedLyrics",org.json.JSONObject.NULL).put("plainLyrics","Fallback words");
+        check(()->LyricsRepository.fromResponse(fallback).text.equals("Fallback words"),"online response falls back to plain lyrics");
+        org.json.JSONObject instrumental=new org.json.JSONObject().put("instrumental",true);
+        check(()->LyricsRepository.fromResponse(instrumental).text.isEmpty()&&LyricsRepository.fromResponse(instrumental).message.contains("instrumental"),"instrumental tracks have an explicit result");
     }
     private void identity(MainActivity activity) throws Exception {
         check(()->getTargetContext().getPackageName().equals("simple.music.player"),"new application package");

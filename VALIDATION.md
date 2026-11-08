@@ -1,3 +1,14 @@
+# Version 3.6 · Now Playing lyrics validation
+
+- Resource / Java / DEX compilation, APK alignment, and signature verification passed.
+- **34 host feature checks passed**, including lyrics timing, malformed timestamps, metadata removal, and UTF-8 / UTF-16 decoding.
+- **23 Android lyrics integration checks passed** on the API 35 emulator: inline display, automatic opening, linked UTF-16 text, seek highlighting, tap-to-seek without resuming paused playback, cover toggle, track changes, missing-file recovery, original-song attachment, plain text, and online-response parsing.
+- Online lookup is explicit and uses HTTPS with bounded reads and timeouts; successful lyrics are privately cached. The service endpoint was reachable from the build host (HTTP 400 for a request without track metadata). Live song matching and Android network lookup were not tested end to end.
+- Screenshots use synthetic lyrics and test audio; production builds contain no demo songs. Emulator launcher ANR alerts required dismissal during preview capture. Physical devices and other Android versions remain untested for this change.
+- APK metadata confirms **Simple Player**, package `simple.music.player`, version **3.6**, code **9**, minimum API **24**, target API **35**. The new internet permission supports optional lyrics lookup.
+- Signature retains certificate `3fb413c86beccc6627a4c3be5de0a8cb4bfc15715d03ebbf2d02ab85ff037c73`.
+- APK SHA-256: `ddd7b1840eda097539258aea7d6ee2748c64ae72b1692ae5d7b36d90e18535c1`.
+
 # Version 3.5 · Gold text validation
 
 - Resource / Java / DEX compilation, APK alignment, and signature verification passed for the gold-text update.

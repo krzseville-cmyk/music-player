@@ -10,7 +10,7 @@ public final class FeatureTests {
     static int checks;
     static void check(boolean value,String message) { checks++; if (!value) throw new AssertionError(message); }
     public static void main(String[] args) throws Exception {
-        lyrics(); playlists(); mp3();
+        lyrics(); lyricEncoding(); playlists(); mp3();
         System.out.println("Passed " + checks + " feature checks");
     }
     static void lyrics() {
@@ -23,6 +23,17 @@ public final class FeatureTests {
         check(lyrics.active(3749)==1,"between timestamps");
         check(lyrics.active(Long.MAX_VALUE)==3,"after final lyric");
         check(new Lyrics("Plain lyrics\nsecond line").lines.isEmpty(),"plain lyrics supported");
+    }
+    static void lyricEncoding() throws Exception {
+        String lrc="[ar:Artist]\n[00:01.00]Golden words\n[00:02.50]Second line";
+        check(LyricsText.read(new ByteArrayInputStream(concat(new byte[]{(byte)239,(byte)187,(byte)191},lrc.getBytes(StandardCharsets.UTF_8)))).equals(lrc),"UTF-8 BOM decoded");
+        check(LyricsText.read(new ByteArrayInputStream(concat(new byte[]{(byte)255,(byte)254},lrc.getBytes(StandardCharsets.UTF_16LE)))).equals(lrc),"UTF-16 LE LRC decoded");
+        check(LyricsText.read(new ByteArrayInputStream(concat(new byte[]{(byte)254,(byte)255},lrc.getBytes(StandardCharsets.UTF_16BE)))).equals(lrc),"UTF-16 BE LRC decoded");
+        Lyrics parsed=new Lyrics(lrc);
+        check(parsed.plain.equals("Golden words\nSecond line"),"plain text removes timing and file metadata");
+        check(new Lyrics("[offset:9999999999999999999999999]\n[99999999999999999999999:01]Bad\n[00:01]Good").lines.size()==1,"invalid numeric metadata cannot break valid lyrics");
+        check(new Lyrics("[00:99]Bad\n[00:02]Good").lines.size()==1,"invalid seconds ignored");
+        check(new Lyrics("[ar:Artist]\n[ti:Title]").plain.isEmpty(),"metadata is not displayed as lyrics");
     }
     static Song song(long id,String folder,String name) {
         Song s = new Song(id,name,"Artist","Album",1,120000,1,Uri.parse("content://media/external/audio/media/"+id));

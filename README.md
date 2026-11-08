@@ -1,8 +1,17 @@
 # Simple Player
 
-A native, offline Android music player. Android 7.0 (API 24) or newer; no account or network permission required.
+A native local-music player for Android 7.0 (API 24) or newer. Playback and saved lyrics work offline; optional online lyrics lookup needs internet access. No account is required.
 
-[Download Simple Player](<dist/Simple Player.apk>) · [Theme previews](docs/THEMES.md)
+[Download Simple Player](<dist/Simple Player.apk>) · [Lyrics preview](docs/screenshots/now-playing-lyrics-v3.6.png) · [Theme previews](docs/THEMES.md)
+
+## Version 3.6 · Lyrics in Now Playing
+
+- Lyrics display directly in the Now Playing artwork area; tap **Cover** to return to album art or **Lyrics** to bring the words back. Available saved / embedded lyrics open automatically until you choose Cover.
+- Synced LRC lines highlight and scroll with playback. Tap a line to seek; manually scrolling pauses automatic following and **Follow** resumes it. Plain lyrics are labelled as untimed text.
+- Linked LRC / text files and embedded MP3 USLT lyrics load locally. UTF-8, UTF-8 BOM, and UTF-16 BOM lyrics files are supported. Invalid numeric LRC timing cannot crash valid lines.
+- Missing lyrics have **Add file** and **Find online** actions. Find online sends the current title, artist, album (if present), and duration to LRCLIB only after you tap it; successful results are cached privately for offline reuse. No audio is uploaded. Availability depends on metadata and the service.
+- Song changes clear old words; stale async results are ignored. A file selected while another song plays stays attached to its original song. Unavailable files have a recovery message rather than a blank panel.
+- Version **3.6**, code **9**; package `simple.music.player` and signing identity unchanged.
 
 ## Version 3.5 · Gold text
 
@@ -49,7 +58,7 @@ A native, offline Android music player. Android 7.0 (API 24) or newer; no accoun
 - Song sorting by title, artist, album, date added, or duration; folder exclusions and manual library rescan.
 - Queue editing, play next, shuffle, and repeat; queue / current track / position restore **paused** after a process restart. Shuffle and repeat settings survive restarts. Active playback checkpoints its position every ten seconds and immediately on pause or queue changes.
 - Sleep timer: 15 / 30 / 45 / 60 minutes or end of song. Timers are intentionally session-only.
-- Embedded MP3 lyrics and user-selected `.lrc` / UTF-8 `.txt` lyrics; synchronized highlighting, auto-scroll, and tap a timed line to seek.
+- Embedded MP3 lyrics and user-selected `.lrc` / UTF-8 or UTF-16 `.txt` lyrics; synchronized highlighting, auto-scroll, and tap a timed line to seek.
 - Equalizer presets and bass boost (when supported by the device), 0.5–2× playback speed, gapless playback, and optional 3 / 5 / 8 second crossfade.
 - Optional ReplayGain normalization reads embedded ID3 `REPLAYGAIN_TRACK_GAIN` tags. Untagged / unsupported formats keep their original volume; it does not analyze loudness or write gain tags.
 - UTF-8 M3U import/export through Android's document picker. Local paths and unique filenames are matched; ambiguous / missing files are reported. Streaming URLs are never fetched.

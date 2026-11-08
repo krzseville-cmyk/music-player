@@ -90,22 +90,14 @@ final class PlayerTools {
                 .setType("audio/x-mpegurl").putExtra(Intent.EXTRA_TITLE, name.replaceAll("[/\\\\]", "_") + ".m3u");
         try { host.startActivityForResult(intent, EXPORT); } catch (android.content.ActivityNotFoundException e) { message("No document picker is installed."); }
     }
+    void attachLyrics(Song song){
+        lyricsSong=song;prefs.prefs.edit().putString("lyricsTarget",song.uri.toString()).apply();pick(LRC,"*/*");
+    }
     void lyrics(Song song) {
-        lyricsSong = song;
-        prefs.prefs.edit().putString("lyricsTarget", song.uri.toString()).apply();
-        io.execute(() -> {
-            String text = "";
-            try {
-                String linked = prefs.prefs.getString("lyrics:" + song.uri, "");
-                if (!linked.isEmpty()) {
-                    try (InputStream in = host.getContentResolver().openInputStream(Uri.parse(linked))) { text = readText(in, 1024*1024); }
-                } else {
-                    try (InputStream in = host.getContentResolver().openInputStream(song.uri)) { text = Mp3Metadata.lyrics(in); }
-                }
-            } catch (Exception ignored) { }
-            final String loaded = text;
-            ui(() -> showLyrics(song, loaded));
-        });
+        MusicService player=host.player();
+        if(player!=null&&player.getCurrentSong()!=null&&player.getCurrentSong().uri.equals(song.uri)){host.showSongLyrics(song);return;}
+        lyricsSong=song;prefs.prefs.edit().putString("lyricsTarget",song.uri.toString()).apply();
+        host.lyricsRepository().load(song,result->ui(()->{if(lyricsSong!=null&&lyricsSong.uri.equals(song.uri))showLyrics(song,result.text);}));
     }
     private void showLyrics(Song song, String source) {
         if (lyricDialog != null) lyricDialog.dismiss();
@@ -125,7 +117,7 @@ final class PlayerTools {
         }
         col.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(320)));
         lyricDialog = dialog(song.title).setView(col).setPositiveButton("Done",null)
-                .setNeutralButton("Attach lyrics…", (d,w) -> pick(LRC,"*/*"))
+                .setNeutralButton("Attach lyrics…", (d,w) -> attachLyrics(song))
                 .setNegativeButton("Unlink", (d,w) -> { prefs.prefs.edit().remove("lyrics:" + song.uri).apply(); message("Linked lyrics removed."); }).create();
         final AlertDialog current = lyricDialog;
         Runnable follow = new Runnable() {
@@ -246,7 +238,7 @@ final class PlayerTools {
         if (result != Activity.RESULT_OK || data == null || data.getData() == null) { if (request==COVER) editTags(); return; }
         final Uri uri = data.getData();
         try { host.getContentResolver().takePersistableUriPermission(uri, data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION)); }
-        catch (SecurityException ignored) { }
+        catch (SecurityException | IllegalArgumentException ignored) { }
         if (request == EXPORT) {
             final String content = prefs.prefs.getString("pendingM3U", "");
             io.execute(() -> {
@@ -266,9 +258,21 @@ final class PlayerTools {
                 } catch (Exception e) { message("Import failed: " + e.getMessage()); }
             });
         } else if (request == LRC) {
-            String target = prefs.prefs.getString("lyricsTarget", "");
-            prefs.prefs.edit().putString("lyrics:" + target,uri.toString()).apply();
-            if (lyricsSong != null) lyrics(lyricsSong); else message("Lyrics linked. Open the song’s lyrics to view them.");
+            final String target=prefs.prefs.getString("lyricsTarget","");
+            if(target.isEmpty()){message("Choose a song before attaching lyrics.");return;}
+            io.execute(()->{
+                try(InputStream in=host.getContentResolver().openInputStream(uri)){
+                    String text=LyricsText.read(in);if(text.isEmpty())throw new IOException("The lyrics file is empty");
+                    new Lyrics(text);
+                    prefs.prefs.edit().putString("lyrics:"+target,uri.toString()).apply();
+                    ui(()->{
+                        MusicService p=host.player();
+                        if(p!=null&&p.getCurrentSong()!=null&&p.getCurrentSong().uri.toString().equals(target))host.reloadLyricsFor(target);
+                        else if(lyricsSong!=null&&lyricsSong.uri.toString().equals(target))lyrics(lyricsSong);
+                        message("Lyrics linked to this song.");
+                    });
+                }catch(Exception e){message("Cannot read lyrics: "+e.getMessage());}
+            });
         } else if (request == MP3) {
             io.execute(() -> {
                 try { Song song = describe(uri); ui(() -> { editUri = uri; cover = null; editTitle = song.title; editArtist = song.artist; editAlbum = song.album; editTags(); }); }
@@ -287,7 +291,6 @@ final class PlayerTools {
             });
         }
     }
-    private static String readText(InputStream in,int limit) throws IOException { return new String(readBytes(in,limit),StandardCharsets.UTF_8).replace("\uFEFF", ""); }
     private static byte[] readBytes(InputStream in,int limit) throws IOException {
         if (in == null) throw new IOException("File is unavailable");
         ByteArrayOutputStream out = new ByteArrayOutputStream(); byte[] buffer = new byte[8192]; int n;

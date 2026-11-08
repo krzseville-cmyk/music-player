@@ -4,5 +4,5 @@ cd "$(dirname "$0")/.."
 mkdir -p build/tests
 find build/tests -type f -delete
 javac -encoding UTF-8 -d build/tests tests/stubs/android/net/Uri.java \
-  src/simple/music/player/{Song,Lyrics,PlaylistIO,Mp3Metadata}.java tests/simple/music/player/FeatureTests.java
+  src/simple/music/player/{Song,Lyrics,LyricsText,PlaylistIO,Mp3Metadata}.java tests/simple/music/player/FeatureTests.java
 java -cp build/tests simple.music.player.FeatureTests

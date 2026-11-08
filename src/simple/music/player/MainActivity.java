@@ -147,6 +147,37 @@ public class MainActivity extends Activity implements MusicService.Listener {
     private PlaylistStore playlists;
     private LibraryPreferences preferences;
     private PlayerTools tools;
+    private LyricsRepository lyricsRepository;
+    private NowPlayingLyrics npLyrics;
+    private FrameLayout npArtBox;
+    private TextView npLyricsToggle,npLyricsHint;
+    private boolean lyricsForced;
+    private String boundLyricsUri="";
+    LyricsRepository lyricsRepository(){return lyricsRepository;}
+    void attachLyrics(Song song){tools.attachLyrics(song);}
+    void reloadLyricsFor(String uri){
+        if(npLyrics!=null&&npLyrics.songUri().equals(uri)){
+            lyricsForced=true;npLyrics.reload();showNowPlaying();setLyricsVisible(true);
+        }
+    }
+    void showSongLyrics(Song song){
+        if(service==null||service.getCurrentSong()==null||!service.getCurrentSong().uri.equals(song.uri))return;
+        showNowPlaying();lyricsForced=true;preferences.prefs.edit().putBoolean("lyricsOnPlayer",true).apply();setLyricsVisible(true);
+    }
+    void showCover(){lyricsForced=false;preferences.prefs.edit().putBoolean("lyricsOnPlayer",false).apply();setLyricsVisible(false);}
+    void onLyricsReady(boolean available){
+        if(npLyricsHint!=null)npLyricsHint.setText(available?"LYRICS  ·  Tap to view":"LYRICS  ·  Find or add lyrics");
+        if(available&&preferences.prefs.getBoolean("lyricsOnPlayer",true))setLyricsVisible(true);
+        else if(!available&&!lyricsForced)setLyricsVisible(false);
+    }
+    private void setLyricsVisible(boolean visible){
+        if(npLyrics==null)return;
+        npLyrics.setVisibility(visible?View.VISIBLE:View.GONE);npArt.setVisibility(visible?View.GONE:View.VISIBLE);
+        if(npLyricsToggle!=null)npLyricsToggle.setText(visible?"Cover":"Lyrics");
+        LinearLayout.LayoutParams params=(LinearLayout.LayoutParams)npArtBox.getLayoutParams();
+        params.height=dp(visible?300:180);npArtBox.setLayoutParams(params);
+        if(visible)npLyrics.reveal();
+    }
     private SettingsScreen settingsScreen;
     private FrameLayout screenRoot;
     private android.window.OnBackInvokedCallback backCallback;
@@ -297,6 +328,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
         applyTheme();
         super.onCreate(savedInstanceState);
         playlists = new PlaylistStore(this);
+        lyricsRepository=new LyricsRepository(this);
         tools = new PlayerTools(this, preferences);
         pendingIntent = getIntent();
         View root = buildUi();
@@ -361,6 +393,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
         if (service != null) service.removeListener(this);
         if (bound) unbindService(connection);
         if (tools != null) tools.close();
+        if (lyricsRepository!=null)lyricsRepository.close();
         if(Build.VERSION.SDK_INT>=33 && backCallback!=null)getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(backCallback);
         super.onDestroy();
     }
@@ -1057,6 +1090,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
         Song s = service.getCurrentSong();
         updateOverview();
         if (s == null) {
+            if(npLyrics!=null)npLyrics.bind(null);boundLyricsUri="";
             miniPlayer.setVisibility(View.GONE);
             hideOverlays();
             return;
@@ -1072,6 +1106,12 @@ public class MainActivity extends Activity implements MusicService.Listener {
         if (art != null) showBitmap(miniArt, art);
         else setRecordPlaceholder(miniArt,s);
 
+        // Bind before asynchronous loading so stale results cannot follow a song change.
+        if(!boundLyricsUri.equals(s.uri.toString())){
+            boundLyricsUri=s.uri.toString();lyricsForced=false;
+            npLyricsHint.setText("LYRICS  ·  Loading…");setLyricsVisible(false);
+        }
+        npLyrics.bind(s);
         // Now Playing
         npTitle.setText(s.title);
         npArtist.setText(s.album.isEmpty() ? s.artist : s.artist + " • " + s.album);
@@ -1118,6 +1158,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
             npPos.setText(formatTime(pos));
         }
         npDur.setText(formatTime(service.getDuration()));
+        if(npLyrics!=null)npLyrics.tick();
     }
 
     private void setPlayerTint(int color) {
@@ -1742,6 +1783,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
 
         // Artwork
         FrameLayout artBox = new FrameLayout(this);
+        npArtBox=artBox;
         artBox.setPadding(dp(8), dp(14), dp(8), dp(14));
         npArt = new SquareImageView(this);
         npArt.setBackground(outlined(SURFACE2,RecordArtwork.blend(SURFACE2,ACCENT,.25f),28));
@@ -1749,6 +1791,8 @@ public class MainActivity extends Activity implements MusicService.Listener {
         npArt.setElevation(dp(8));
         artBox.addView(npArt, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER));
+        npLyrics=new NowPlayingLyrics(this,lyricsRepository);npLyrics.setVisibility(View.GONE);
+        artBox.addView(npLyrics,new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT));
         col.addView(artBox, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(180), 1f));
 
         playbackInfo=text(10,ACCENT,true);
@@ -1770,6 +1814,9 @@ public class MainActivity extends Activity implements MusicService.Listener {
             if (service != null && service.getCurrentSong() != null) goToArtist(service.getCurrentSong());
         });
         col.addView(npArtist);
+        npLyricsHint=text(11,TEXT,true);npLyricsHint.setText("LYRICS  ·  Find or add lyrics");
+        npLyricsHint.setPadding(0,dp(6),0,dp(2));npLyricsHint.setOnClickListener(v->{if(service!=null&&service.getCurrentSong()!=null)showSongLyrics(service.getCurrentSong());});
+        col.addView(npLyricsHint);
 
         // Seek bar
         npSeek = new SeekBar(this);
@@ -1837,7 +1884,11 @@ public class MainActivity extends Activity implements MusicService.Listener {
             }
         });
         addActionCell(bottom,favoriteButton);
-        addActionCell(bottom,actionChip("Lyrics", () -> { if (service != null && service.getCurrentSong() != null) tools.lyrics(service.getCurrentSong()); }));
+        npLyricsToggle=actionChip("Lyrics",()->{
+            if(npLyrics.getVisibility()==View.VISIBLE)showCover();
+            else if(service!=null&&service.getCurrentSong()!=null)showSongLyrics(service.getCurrentSong());
+        });
+        addActionCell(bottom,npLyricsToggle);
         addActionCell(bottom,actionChip("Queue", this::showQueue));
         col.addView(bottom);
         timerButton = actionChip("Sleep timer", () -> tools.sleepTimer());
