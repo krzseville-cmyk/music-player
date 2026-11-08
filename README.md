@@ -4,6 +4,11 @@ A native local-music player for Android 7.0 (API 24) or newer. Playback and save
 
 [Download Simple Player](<dist/Simple Player.apk>) · [Lyrics preview](docs/screenshots/now-playing-lyrics-v3.6.png) · [Theme previews](docs/THEMES.md)
 
+## Version 3.9 · One queue shortcut
+
+- Removed the duplicate Queue action from the Now Playing icon row. Open the queue from the Up Next card or its queue icon.
+- The action row now contains Favorite, Lyrics / Cover, and Sleep timer. Version **3.9**, code **12**.
+
 ## Version 3.8 · Icon actions
 
 - Favorite, Lyrics / Cover, Queue, and Sleep timer now use gold icons in one compact row, with no text labels or filled button backgrounds.

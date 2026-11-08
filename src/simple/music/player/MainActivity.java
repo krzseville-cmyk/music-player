@@ -1911,7 +1911,6 @@ public class MainActivity extends Activity implements MusicService.Listener {
             else if(service!=null&&service.getCurrentSong()!=null)showSongLyrics(service.getCurrentSong());
         });
         addActionCell(bottom,npLyricsToggle);
-        addActionCell(bottom,playerAction(R.drawable.ic_queue,"Open queue",this::showQueue));
         timerButton=playerAction(R.drawable.ic_timer,"Sleep timer: Off",()->tools.sleepTimer());
         addActionCell(bottom,timerButton);
         col.addView(bottom);

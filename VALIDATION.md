@@ -1,3 +1,11 @@
+# Version 3.9 · Remove duplicate queue shortcut
+
+- Removed the Queue icon from the Now Playing action row. The Up Next card and its queue icon still open the queue; the remaining three actions share the row equally.
+- Resource / Java / DEX compilation, APK alignment, and signature verification passed. Metadata confirms package `simple.music.player`, version **3.9**, code **12**, minimum API **24**, target API **35**.
+- Certificate remains `3fb413c86beccc6627a4c3be5de0a8cb4bfc15715d03ebbf2d02ab85ff037c73`.
+- APK SHA-256: `c48c2885bd28184f5530eef754549c6c1726239615a674ddd9e667d44afe4eef`.
+- This single-control removal was reviewed in source and built; emulator and physical-device suites were not rerun. Earlier results below are historical.
+
 # Version 3.8 · Icon actions
 
 - Converted Now Playing's favorite, lyrics / cover, queue, and sleep-timer chips to native ImageButtons in a single row. Preserved click handlers, favorite state, lyrics toggle state, and accessible timer status. Each action has a 48 dp touch target, a descriptive accessibility label, and a tooltip on API 26+.
