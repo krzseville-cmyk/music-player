@@ -127,7 +127,32 @@ export MUSIC_SIGNING_KEY=/private/path/musicplayer.keystore
 bash build.sh
 ```
 
-Keep signing keys outside the repository. The historical ZIP on `main` is retained as the original upload; the editable `src/`, `res/`, and manifest at repository root are the current source.
+Keep signing keys outside the repository. The old uploaded ZIP contained a private signing key and has been removed from the current files; it may still exist in Git history or earlier downloads. Treat that key as exposed and plan a supported signing-key rotation before trusting it for future releases. Replacing a signing key without Android-supported rotation can prevent updates to existing installations; plan the migration before changing it. The editable `src/`, `res/`, and manifest at repository root are the current source.
+
+### Private signing in GitHub Actions
+
+The manual **Build signed APK** workflow reads these **repository secrets** (Settings → Secrets and variables → Actions → Secrets):
+
+| Secret name | Private value |
+| --- | --- |
+| `MUSIC_KEYSTORE_BASE64` | Base64-encoded contents of your signing keystore file |
+| `MUSIC_STORE_PASSWORD` | Your keystore password |
+| `MUSIC_KEY_PASSWORD` | Your signing-key password |
+
+Optionally add the non-private repository **variable** `JAVA_VERSION` with value `17`. It defaults to 17. `MUSIC_SIGNING_KEY` is a temporary file path created by the workflow; do not add it as a secret.
+
+Encode the keystore locally, outside this repository. For example, on Linux / macOS:
+
+```sh
+umask 077
+base64 < /private/path/musicplayer.keystore > /private/path/musicplayer.keystore.b64
+```
+
+Paste the contents of that private `.b64` file into `MUSIC_KEYSTORE_BASE64`, then remove the temporary `.b64` file. Base64 is encoding, not encryption. Never paste signing files or passwords into chat, source code, issue comments, or workflow logs.
+
+After configuring the secrets, open **Actions → Build signed APK → Run workflow**, select **main**, and download the **Simple-Player-signed** artifact after the run succeeds. The workflow uses fixed action commits, runs only manually on main, fails if credentials are missing, restores the key in a private temporary file, and deletes that file after signing. No secrets are included in the APK or uploaded artifact.
+
+The literal `android` password in debug/test builds is Android's public debug convention, not a release credential. Production signing reads passwords from environment variables using `env:` references. Do not use a debug key for production.
 
 ## Verification
 
