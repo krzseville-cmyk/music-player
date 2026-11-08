@@ -26,7 +26,7 @@ final class ThemeDialogs {
                     window.setLayout(Math.min(width,(int)(520*density)),WindowManager.LayoutParams.WRAP_CONTENT);
                 }
                 for(int which:new int[]{AlertDialog.BUTTON_POSITIVE,AlertDialog.BUTTON_NEGATIVE,AlertDialog.BUTTON_NEUTRAL}){
-                    Button button=dialog.getButton(which);if(button!=null)button.setTextColor(theme.accent);
+                    Button button=dialog.getButton(which);if(button!=null)button.setTextColor(theme.text);
                 }
             });return dialog;
         }

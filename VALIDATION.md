@@ -1,3 +1,13 @@
+# Version 3.5 · Gold text validation
+
+- Resource / Java / DEX compilation, APK alignment, and signature verification passed for the gold-text update.
+- Primary and secondary text were checked against each theme's background, card, and raised surface; filled-button text was checked against its accent background. All combinations meet **4.5:1**. Minimum body-text contrast: Ember **7.74:1**, Amethyst **7.52:1**, Daylight **4.91:1**.
+- Shared native app / dialog text colors, input hints, link colors, explicit app text colors, lyrics, and widget text use the updated gold palette. Theme control colors are unchanged.
+- APK metadata confirms **Simple Player**, package `simple.music.player`, version **3.5**, code **8**; minimum API **24**, target API **35**.
+- Signature retains certificate `3fb413c86beccc6627a4c3be5de0a8cb4bfc15715d03ebbf2d02ab85ff037c73`.
+- APK SHA-256: `45319eaad60a0162382cd00fd755be563387d52fc5f120358df24986abd3d94c`.
+- This reversible text-color change was built and checked statically. Emulator / physical-device suites were not rerun; screenshots and test results for earlier versions below are historical.
+
 # Version 3.4 · Simple Player identity validation
 
 - Built, aligned, and signed **`dist/Simple Player.apk`**. APK metadata confirms application label **Simple Player**, package **`simple.music.player`**, launcher **`simple.music.player.MainActivity`**, version **3.4**, code **7**, minimum API **24**, target API **35**.

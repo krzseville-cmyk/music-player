@@ -4,6 +4,13 @@ A native, offline Android music player. Android 7.0 (API 24) or newer; no accoun
 
 [Download Simple Player](<dist/Simple Player.apk>) · [Theme previews](docs/THEMES.md)
 
+## Version 3.5 · Gold text
+
+- Gold-yellow primary text (`#FFD54F`) and softer gold secondary text in both dark themes, including library / player headings, settings, dialogs, lyrics, input hints, and widget labels.
+- Light mode uses darker gold for readable text; filled buttons use contrasting gold tones. Existing theme control accents and backgrounds are retained.
+- Version **3.5**, code **8**. App name **Simple Player**, package **`simple.music.player`**, and signing certificate are unchanged, so this updates an existing Simple Player installation.
+- Theme screenshots below predate this text-color update.
+
 ## Version 3.4 · Simple Player
 
 - App / launcher / widget / About name: **Simple Player**.

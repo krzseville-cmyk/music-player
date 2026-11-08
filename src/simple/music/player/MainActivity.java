@@ -1098,7 +1098,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
         }
         if (favoriteButton != null) {
             favoriteButton.setText(preferences.favorite(s) ? "♥ Saved" : "♡ Favorite");
-            favoriteButton.setTextColor(preferences.favorite(s) ? ACCENT : SUBTEXT);
+            favoriteButton.setTextColor(preferences.favorite(s) ? TEXT : SUBTEXT);
         }
         if (tab == TAB_HISTORY || tab == TAB_FAVORITES) refresh();
         updateProgress();
@@ -1352,7 +1352,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
     private TextView text(float sp, int color, boolean bold) {
         TextView t = new TextView(this);
         t.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
-        t.setTextColor(color);
+        t.setTextColor(color == ACCENT ? TEXT : color);
         if (bold) t.setTypeface(Typeface.DEFAULT_BOLD);
         t.setSingleLine(true);
         t.setEllipsize(TextUtils.TruncateAt.END);
@@ -2095,13 +2095,13 @@ public class MainActivity extends Activity implements MusicService.Listener {
                 boolean numbered=detail.type==DETAIL_ALBUM || detail.type==DETAIL_PLAYLIST || (detail.type==DETAIL_NONE && (tab==TAB_SONGS || tab==TAB_FAVORITES));
                 h.number.setVisibility(numbered ? View.VISIBLE : View.GONE);
                 h.number.setText(active && service.isActive() ? "Ⅱ" : String.format(Locale.US,"%02d",position+1-(detail.type==DETAIL_NONE && tab==TAB_SONGS && query().isEmpty()?1:0)));
-                h.number.setTextColor(active ? ACCENT : SUBTEXT);
+                h.number.setTextColor(active ? TEXT : SUBTEXT);
                 h.number.setContentDescription(active && service.isActive() ? "Playing" : "Track number");
                 h.duration.setVisibility(View.VISIBLE);
                 h.duration.setText(formatTime(s.duration));
                 if (active) row.setBackground(outlined(RecordArtwork.blend(BG,ACCENT,.08f),RecordArtwork.blend(BG,ACCENT,.18f),14));
                 h.title.setText((preferences.favorite(s) ? "♥  " : "") + s.title);
-                h.title.setTextColor(active ? ACCENT : TEXT);
+                h.title.setTextColor(TEXT);
                 h.title.setTypeface(active ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
                 String sub = detail.type == DETAIL_ARTIST
                         ? (s.album.isEmpty() ? "Unknown album" : s.album) : s.artist;
@@ -2129,7 +2129,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
             } else if (o instanceof Action) {
                 Action a = (Action) o;
                 h.title.setText(a.label);
-                h.title.setTextColor(ACCENT);
+                h.title.setTextColor(TEXT);
                 h.title.setTypeface(Typeface.DEFAULT_BOLD);
                 h.subtitle.setVisibility(View.GONE);
                 h.action.setVisibility(View.GONE);
@@ -2176,7 +2176,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
             h.duration.setVisibility(View.VISIBLE);
             h.duration.setText(formatTime(s.duration));
             h.title.setText(s.title);
-            h.title.setTextColor(current ? ACCENT : TEXT);
+            h.title.setTextColor(TEXT);
             h.title.setTypeface(current ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
             h.subtitle.setText((current ? "Now playing  •  " : "") + s.artist);
             h.art.setBackground(rounded(SURFACE, 10));
@@ -2231,7 +2231,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
             TextView sub = (TextView) cell.getChildAt(2);
             Song current = service != null ? service.getCurrentSong() : null;
             title.setText(a.name);
-            title.setTextColor(current != null && current.albumId == a.id ? ACCENT : TEXT);
+            title.setTextColor(TEXT);
             sub.setText(a.songs.size() + " tracks  ·  " + a.artist);
             bindArt(art, a.songs.get(0), GRID_ART_PX, R.drawable.ic_album, dp(40));
             return cell;

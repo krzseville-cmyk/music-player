@@ -136,7 +136,7 @@ final class PlayerTools {
                 if (player != null && player.getCurrentSong() != null && player.getCurrentSong().uri.equals(song.uri)) {
                     int active = lyrics.active(player.getPosition());
                     if (active != previous) {
-                        for (int i=0;i<views.size();i++) views.get(i).setTextColor(i==active ? host.accentColor() : host.mutedColor());
+                        for (int i=0;i<views.size();i++) views.get(i).setTextColor(i==active ? host.textColor() : host.mutedColor());
                         if (active >= 0 && active < views.size()) scroll.smoothScrollTo(0, Math.max(0, views.get(active).getTop() - dp(100)));
                         previous = active;
                     }

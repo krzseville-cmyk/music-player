@@ -55,7 +55,7 @@ final class SettingsScreen extends FrameLayout {
     private int dp(float n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
     private SharedPreferences audio(){return host.getSharedPreferences("player",0);}
     private TextView text(String value,float size,int color,boolean bold){
-        TextView view=new TextView(host);view.setText(value);view.setTextSize(size);view.setTextColor(color);
+        TextView view=new TextView(host);view.setText(value);view.setTextSize(size);view.setTextColor(color == host.accentColor() ? host.textColor() : color);
         if(bold)view.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));return view;
     }
     private GradientDrawable shape(int fill,int stroke,int radius){
