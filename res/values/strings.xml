@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Music Player</string>
+    <color name="ic_launcher_bg">#0B0B0B</color>
+    <string name="widget_description">Playback controls and your current song</string>
+</resources>
