@@ -74,7 +74,8 @@ public class MainActivity extends Activity implements MusicService.Listener {
     private int TEXT = 0xFFFFF7ED;
     private int SUBTEXT = 0xFFBFAF9E;
     private int NP_DEFAULT_TINT = 0xFF493022;
-    private int DIALOG_THEME = android.R.style.Theme_Material_Dialog_Alert;
+    private AppTheme appTheme;
+    AppTheme appTheme(){return appTheme;}
 
     private static final int LIST_ART_PX = 192;
     private static final int GRID_ART_PX = 480;
@@ -151,6 +152,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
     private android.window.OnBackInvokedCallback backCallback;
     void showSettings() { openSettings("root",false); }
     void showSoundSettings() { openSettings("sound",false); }
+    void showAppearanceSettings() { openSettings("appearance",false); }
     private void openSettings(String page,boolean parent) {
         hideKeyboard();
         settingsScreen.open(page,parent);
@@ -191,14 +193,10 @@ public class MainActivity extends Activity implements MusicService.Listener {
     int surfaceColor() { return SURFACE; }
     int backgroundColor() { return BG; }
     private void applyTheme() {
-        String theme = preferences.theme();
-        if ("purple".equals(theme)) { ACCENT = 0xFFC5B3FF; ON_ACCENT = 0xFF261A47; NP_DEFAULT_TINT = 0xFF342A4A; }
-        if ("light".equals(theme)) {
-            BG = 0xFFFFFAF5; SURFACE = 0xFFF2E9DF; SURFACE2 = 0xFFE7D8C9;
-            TEXT = 0xFF291D15; SUBTEXT = 0xFF726150; ACCENT = 0xFFA34B1D; ON_ACCENT = 0xFFFFFFFF;
-            NP_DEFAULT_TINT = 0xFFF2D6C1; DIALOG_THEME = android.R.style.Theme_Material_Light_Dialog_Alert;
-            setTheme(android.R.style.Theme_Material_Light_NoActionBar);
-        }
+        appTheme=AppTheme.from(this,preferences.theme());
+        BG=appTheme.background;SURFACE=appTheme.surface;SURFACE2=appTheme.raised;ACCENT=appTheme.accent;
+        ON_ACCENT=appTheme.onAccent;TEXT=appTheme.text;SUBTEXT=appTheme.muted;NP_DEFAULT_TINT=appTheme.player;
+        setTheme(appTheme.appStyle);
     }
 
     /** Rows currently shown in the main list: Song, Album, Artist, Playlist, Action or String (header). */
@@ -295,9 +293,9 @@ public class MainActivity extends Activity implements MusicService.Listener {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
         preferences = new LibraryPreferences(this);
         applyTheme();
+        super.onCreate(savedInstanceState);
         playlists = new PlaylistStore(this);
         tools = new PlayerTools(this, preferences);
         pendingIntent = getIntent();
@@ -961,7 +959,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
         String[] items = new String[all.size() + 1];
         items[0] = "+  New playlist";
         for (int i = 0; i < all.size(); i++) items[i + 1] = all.get(i).name;
-        new AlertDialog.Builder(this, DIALOG_THEME)
+        ThemeDialogs.builder(this)
                 .setTitle("Add to playlist")
                 .setItems(items, (d, which) -> {
                     if (which == 0) {
@@ -998,7 +996,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
 
     private void deletePlaylist(final PlaylistStore.Playlist p) {
         if (p == null) return;
-        new AlertDialog.Builder(this, DIALOG_THEME)
+        ThemeDialogs.builder(this)
                 .setTitle("Delete playlist?")
                 .setMessage("\"" + p.name + "\" will be deleted. Your music files are not affected.")
                 .setPositiveButton("Delete", (d, w) -> {
@@ -1019,7 +1017,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
         FrameLayout box = new FrameLayout(this);
         box.setPadding(dp(20), dp(8), dp(20), 0);
         box.addView(input);
-        AlertDialog dialog = new AlertDialog.Builder(this, DIALOG_THEME)
+        AlertDialog dialog = ThemeDialogs.builder(this)
                 .setTitle(title)
                 .setView(box)
                 .setPositiveButton(positive, (d, w) -> {
@@ -1777,7 +1775,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
         npSeek = new SeekBar(this);
         npSeek.setProgressTintList(ColorStateList.valueOf(ACCENT));
         npSeek.setThumbTintList(ColorStateList.valueOf(ACCENT));
-        npSeek.setProgressBackgroundTintList(ColorStateList.valueOf(0xFF55555E));
+        npSeek.setProgressBackgroundTintList(ColorStateList.valueOf(RecordArtwork.blend(SURFACE,TEXT,.18f)));
         npSeek.setPadding(dp(4), dp(16), dp(4), dp(8));
         npSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override

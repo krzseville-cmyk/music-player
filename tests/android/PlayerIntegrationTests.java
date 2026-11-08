@@ -37,10 +37,13 @@ public final class PlayerIntegrationTests extends Instrumentation {
             @Override public void onServiceDisconnected(ComponentName n) { player=null; }
         };
         try {
+            if(arguments!=null&&"themes".equals(arguments.getString("phase")))new LibraryPreferences(getTargetContext()).theme("ember");
             MainActivity activity = (MainActivity)startActivitySync(new Intent(getTargetContext(),MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             getTargetContext().bindService(new Intent(getTargetContext(),MusicService.class),connection,Context.BIND_AUTO_CREATE);
             waitFor(()->player!=null,"service binds");
-            if (arguments!=null && "settings".equals(arguments.getString("phase"))) {
+            if (arguments!=null && "themes".equals(arguments.getString("phase"))) {
+                themePreview(activity);
+            } else if (arguments!=null && "settings".equals(arguments.getString("phase"))) {
                 settingsPreview(activity);
             } else if (arguments!=null && "design".equals(arguments.getString("phase"))) {
                 designPreview(activity);
@@ -117,6 +120,59 @@ public final class PlayerIntegrationTests extends Instrumentation {
         try { java.lang.reflect.Field field=MainActivity.class.getDeclaredField(name);field.setAccessible(true);return field.get(activity); }
         catch(Exception e){throw new RuntimeException(e);}
     }
+    private void themePreview(MainActivity initial) throws Exception {
+        MainActivity current=initial;
+        String[] ids={"ember","purple","light"};
+        String[] names={"Ember","Amethyst","Daylight"};
+        for(int i=0;i<ids.length;i++){
+            final MainActivity host=current;final String id=ids[i];AppTheme palette=host.appTheme();
+            check(()->host.appTheme().id.equals(id),"theme applies after recreation: "+id);
+            check(()->contrast(palette.text,palette.surface)>=4.5,"primary text contrast: "+id);
+            check(()->contrast(palette.muted,palette.surface)>=4.5,"secondary text contrast: "+id);
+            check(()->contrast(palette.accent,palette.surface)>=4.5,"accent text contrast: "+id);
+            check(()->contrast(palette.onAccent,palette.accent)>=4.5,"button text contrast: "+id);
+            android.util.TypedValue resolved=new android.util.TypedValue();
+            host.getTheme().resolveAttribute(android.R.attr.colorAccent,resolved,true);
+            check(()->resolved.data==palette.accent,"native widget accent matches app: "+id);
+            android.view.ContextThemeWrapper dialogContext=new android.view.ContextThemeWrapper(host,palette.dialogStyle);
+            android.util.TypedValue dialogAccent=new android.util.TypedValue();dialogContext.getTheme().resolveAttribute(android.R.attr.colorAccent,dialogAccent,true);
+            check(()->dialogAccent.data==palette.accent,"native dialog accent matches app: "+id);
+            runOnMainSync(host::showSettings);
+            SettingsScreen screen=(SettingsScreen)field(host,"settingsScreen");
+            check(()->screen.findViewWithTag("Theme").getBackground() instanceof android.graphics.drawable.RippleDrawable,"settings rows use themed ripple: "+id);
+            capture("preview-theme-"+id+"-settings.png");
+            runOnMainSync(()->screen.findViewWithTag("Sound & playback").performClick());
+            android.widget.Switch toggle=(android.widget.Switch)screen.findViewWithTag("ReplayGain");
+            check(()->toggle.getThumbTintList().getColorForState(new int[]{android.R.attr.state_checked},0)==palette.accent,"switch accent matches theme: "+id);
+            capture("preview-theme-"+id+"-sound.png");
+            runOnMainSync(()->screen.findViewWithTag("Playback speed").performClick());
+            capture("preview-theme-"+id+"-picker.png");clickText("Cancel");
+            runOnMainSync(host::onBackPressed);
+            runOnMainSync(()->screen.findViewWithTag("Theme").performClick());
+            check(()->screen.page().equals("appearance"),"appearance page opens: "+id);
+            check(()->screen.findViewWithTag("theme-"+id)!=null,"selected theme has a preview card: "+id);
+            capture("preview-theme-"+id+"-appearance.png");
+            int next=(i+1)%ids.length;
+            ActivityMonitor monitor=addMonitor(MainActivity.class.getName(),null,false);
+            try{
+                clickText(names[next]);
+                MainActivity replacement=(MainActivity)monitor.waitForActivityWithTimeout(45000);
+                if(replacement==null)throw new AssertionError("Theme change did not recreate Activity");checks++;
+                current=replacement;
+            }finally{removeMonitor(monitor);}
+            final MainActivity replacement=current;
+            check(()->replacement.appTheme().id.equals(ids[next]),"selected palette applied: "+ids[next]);
+            check(()->{
+                SettingsScreen restored=(SettingsScreen)field(replacement,"settingsScreen");
+                return restored.getVisibility()==View.VISIBLE&&restored.page().equals("appearance")&&restored.hasRootParent();
+            },"appearance navigation restored across theme change");
+            check(()->!player.isPlaying(),"theme change keeps paused playback paused");
+        }
+        final MainActivity last=current;runOnMainSync(last::closeSettings);
+    }
+    private static double contrast(int a,int b){double x=luminance(a),y=luminance(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);}
+    private static double luminance(int color){return .2126*channel(android.graphics.Color.red(color))+.7152*channel(android.graphics.Color.green(color))+.0722*channel(android.graphics.Color.blue(color));}
+    private static double channel(int value){double x=value/255.0;return x<=.04045?x/12.92:Math.pow((x+.055)/1.055,2.4);}
     private void settingsPreview(MainActivity activity) throws Exception {
         runOnMainSync(activity::showSettings);
         SettingsScreen screen=(SettingsScreen)field(activity,"settingsScreen");
@@ -165,8 +221,10 @@ public final class PlayerIntegrationTests extends Instrumentation {
         dismissEmulatorAnr();long end=SystemClock.elapsedRealtime()+20000;
         while(SystemClock.elapsedRealtime()<end){
             android.view.accessibility.AccessibilityNodeInfo root=getUiAutomation().getRootInActiveWindow();
-            if(root!=null)for(android.view.accessibility.AccessibilityNodeInfo node:root.findAccessibilityNodeInfosByText(label)){
-                if(node.getText()==null||!node.getText().toString().equals(label))continue;
+            List<android.view.accessibility.AccessibilityNodeInfo> matches=new ArrayList<>();
+            if(root!=null){matches.addAll(root.findAccessibilityNodeInfosByText(label));matches.addAll(root.findAccessibilityNodeInfosByText(label.toUpperCase(java.util.Locale.ROOT)));}
+            for(android.view.accessibility.AccessibilityNodeInfo node:matches){
+                if(node.getText()==null||!node.getText().toString().equalsIgnoreCase(label))continue;
                 while(node!=null&&!node.isClickable())node=node.getParent();
                 if(node!=null&&node.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK))return;
             }Thread.sleep(100);

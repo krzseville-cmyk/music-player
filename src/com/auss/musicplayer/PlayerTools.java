@@ -38,8 +38,7 @@ final class PlayerTools {
     PlayerTools(MainActivity host, LibraryPreferences prefs) { this.host = host; this.prefs = prefs; }
     void close() { handler.removeCallbacksAndMessages(null); if (lyricDialog != null) lyricDialog.dismiss(); if (tagDialog != null) tagDialog.dismiss(); io.shutdown(); }
     private AlertDialog.Builder dialog(String title) {
-        return new AlertDialog.Builder(host, "light".equals(prefs.theme())
-                ? android.R.style.Theme_Material_Light_Dialog_Alert : android.R.style.Theme_Material_Dialog_Alert).setTitle(title).setOnDismissListener(d -> host.refreshSettings());
+        return ThemeDialogs.builder(host).setTitle(title).setOnDismissListener(d -> host.refreshSettings());
     }
     private void ui(Runnable run) { handler.post(() -> { if (!host.isDestroyed() && !host.isFinishing()) run.run(); }); }
     private void message(String text) { ui(() -> Toast.makeText(host, text, Toast.LENGTH_LONG).show()); }
@@ -60,13 +59,7 @@ final class PlayerTools {
             prefs.sort(which); host.repaint(); d.dismiss();
         }).setNegativeButton("Cancel", null).show();
     }
-    void theme() {
-        String[] values = {"ember", "purple", "light"};
-        int selected = Arrays.asList(values).indexOf(prefs.theme());
-        dialog("Theme").setSingleChoiceItems(new String[]{"Dark · Orange", "Dark · Purple", "Light"}, selected, (d, which) -> {
-            prefs.theme(values[which]); d.dismiss(); host.recreate();
-        }).setNegativeButton("Cancel", null).show();
-    }
+    void theme() { host.showAppearanceSettings(); }
     void excludeFolders() {
         TreeSet<String> folders = new TreeSet<>();
         for (Song song : host.scannedSongs()) folders.add(song.folder);

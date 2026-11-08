@@ -2,7 +2,15 @@
 
 A native, offline Android music player. Android 7.0 (API 24) or newer; no account or network permission required.
 
-[Download version 3.2](dist/MusicPlayer-v3.2.apk) · [Settings preview](docs/screenshots/settings-v3.2.png) · [Sound settings](docs/screenshots/settings-sound-v3.2.png) · [Player preview](docs/screenshots/player-v3.1.png)
+[Download version 3.3](dist/MusicPlayer-v3.3.apk) · [Theme previews](docs/THEMES.md) · [Appearance](docs/screenshots/theme-ember-appearance-v3.3.png)
+
+## Version 3.3 theme consistency
+
+- Shared palettes for app-owned library, player, settings, forms, and dialogs. Amethyst now uses cool purple surfaces rather than orange/brown backgrounds; Daylight uses warm light surfaces and dark readable text.
+- An Appearance page with Ember, Amethyst, and Daylight preview cards and selection indicators. Changing the theme keeps Appearance open and leaves paused playback paused.
+- Theme-matched radio / checkbox accents, switch colors, slider accents, button text, dimming, rounded dialog backgrounds, borders, and pressed-state ripples.
+- Primary, secondary, and accent text meet a 4.5:1 contrast ratio against the card surface in all three palettes.
+- Version **3.3**, code **6**, with the same app name, package, and signing identity.
 
 ## Version 3.2 settings
 

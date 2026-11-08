@@ -5,6 +5,10 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.Typeface;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.drawable.RippleDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.provider.Settings;
@@ -40,7 +44,7 @@ final class SettingsScreen extends FrameLayout {
     void open(String page,boolean parent){this.page=page;rootParent=parent;setVisibility(VISIBLE);render();}
     boolean back(){
         if(getVisibility()!=VISIBLE)return false;
-        if(page.equals("sound")&&rootParent){open("root",false);return true;}
+        if(!page.equals("root")&&rootParent){open("root",false);return true;}
         host.closeSettings();return true;
     }
     void refresh(){
@@ -64,18 +68,20 @@ final class SettingsScreen extends FrameLayout {
         LinearLayout layout=new LinearLayout(host);layout.setOrientation(LinearLayout.VERTICAL);
         LinearLayout bar=new LinearLayout(host);bar.setGravity(Gravity.CENTER_VERTICAL);bar.setPadding(dp(12),dp(8),dp(20),dp(8));
         ImageButton back=new ImageButton(host);back.setImageResource(R.drawable.ic_back);back.setImageTintList(ColorStateList.valueOf(host.textColor()));
-        back.setBackground(shape(host.surfaceColor(),0,16));back.setContentDescription("Back");back.setOnClickListener(v->back());
+        back.setBackground(ripple(shape(host.surfaceColor(),0,16)));back.setContentDescription("Back");back.setOnClickListener(v->back());
         bar.addView(back,new LinearLayout.LayoutParams(dp(48),dp(48)));
-        TextView title=text(page.equals("sound")?"Sound & playback":"Settings",26,host.textColor(),true);
+        TextView title=text(page.equals("sound")?"Sound & playback":page.equals("appearance")?"Appearance":"Settings",26,host.textColor(),true);
         title.setPadding(dp(16),0,0,0);if(Build.VERSION.SDK_INT>=28)title.setAccessibilityHeading(true);
-        bar.addView(title,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1));layout.addView(bar);
+        bar.addView(title,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1));
+        bar.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{RecordArtwork.blend(host.backgroundColor(),host.accentColor(),.045f),host.backgroundColor()}));
+        layout.addView(bar);
         View divider=new View(host);divider.setBackgroundColor(RecordArtwork.blend(host.backgroundColor(),host.textColor(),.08f));
         layout.addView(divider,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(1)));
         scroll=new ScrollView(host);scroll.setFillViewport(true);scroll.setClipToPadding(false);scroll.setVerticalScrollBarEnabled(false);
         sections=new LinearLayout(host);sections.setOrientation(LinearLayout.VERTICAL);sections.setPadding(dp(20),dp(8),dp(20),dp(28));
-        TextView introduction=text(page.equals("sound")?"Fine-tune how your music plays.":"Your music. Your preferences.",14,host.mutedColor(),false);
+        TextView introduction=text(page.equals("sound")?"Fine-tune how your music plays.":page.equals("appearance")?"One theme, across your whole player.":"Your music. Your preferences.",14,host.mutedColor(),false);
         introduction.setPadding(dp(2),dp(14),0,dp(6));sections.addView(introduction);
-        if(page.equals("sound"))soundPage();else rootPage();
+        if(page.equals("sound"))soundPage();else if(page.equals("appearance"))appearancePage();else rootPage();
         scroll.addView(sections);layout.addView(scroll,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1));
         addView(layout,new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT));
         refresh();
@@ -104,7 +110,7 @@ final class SettingsScreen extends FrameLayout {
         TextView current=text("",12,host.mutedColor(),false);current.setMaxWidth(dp(105));current.setGravity(Gravity.END);
         row.addView(current,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,ViewGroup.LayoutParams.WRAP_CONTENT));
         TextView chevron=text("›",24,host.mutedColor(),false);chevron.setPadding(dp(10),0,0,0);chevron.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);row.addView(chevron);
-        row.setTag(title);row.setFocusable(true);row.setBackgroundResource(android.R.drawable.list_selector_background);row.setOnClickListener(v->action.run());
+        row.setTag(title);row.setFocusable(true);row.setBackground(ripple(null));row.setOnClickListener(v->action.run());
         bindings.add(()->{String selected=value==null?"":value.get();update(current,selected);row.setContentDescription(title+(selected.isEmpty()?"":", "+selected)+(summary==null?"":", "+summary));});
     }
     private void toggle(LinearLayout group,int icon,String title,Supplier<String> description,BooleanSupplier checked,BooleanSupplier enabled,Consumer<Boolean> changed){
@@ -116,14 +122,59 @@ final class SettingsScreen extends FrameLayout {
         control.setTrackTintList(new ColorStateList(states,new int[]{RecordArtwork.blend(host.surfaceColor(),host.accentColor(),.45f),RecordArtwork.blend(host.surfaceColor(),host.textColor(),.18f)}));
         row.addView(control);row.setFocusable(true);row.setTag(title+" row");
         control.setOnCheckedChangeListener((button,value)->{if(!refreshing){changed.accept(value);refresh();host.repaint();}});
+        row.setBackground(ripple(null));
         row.setOnClickListener(v->{if(control.isEnabled())control.setChecked(!control.isChecked());});
         bindings.add(()->{update(summary,description.get());boolean available=enabled.getAsBoolean();control.setEnabled(available);row.setEnabled(available);row.setAlpha(available?1f:.55f);control.setChecked(checked.getAsBoolean());});
     }
+    private RippleDrawable ripple(android.graphics.drawable.Drawable background){
+        return new RippleDrawable(ColorStateList.valueOf(host.appTheme().ripple),background,shape(android.graphics.Color.WHITE,0,16));
+    }
+    private void appearancePage(){
+        String[] ids={"ember","purple","light"};
+        String[] names={"Ember","Amethyst","Daylight"};
+        String[] details={"Dark · Orange","Dark · Purple","Light · Warm neutrals"};
+        for(int i=0;i<ids.length;i++){
+            final String id=ids[i];AppTheme palette=AppTheme.from(host,id);boolean selected=palette.id.equals(host.appTheme().id);
+            LinearLayout card=new LinearLayout(host);card.setOrientation(LinearLayout.VERTICAL);card.setPadding(dp(10),dp(10),dp(10),dp(8));
+            GradientDrawable fill=shape(host.surfaceColor(),selected?host.accentColor():RecordArtwork.blend(host.surfaceColor(),host.textColor(),.10f),22);
+            if(selected)fill.setStroke(dp(2),host.accentColor());card.setBackground(ripple(fill));card.setClipToOutline(true);
+            View preview=new ThemePreview(host,palette);preview.setBackground(shape(palette.background,0,14));preview.setClipToOutline(true);
+            preview.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);card.addView(preview,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(76)));
+            LinearLayout description=new LinearLayout(host);description.setGravity(Gravity.CENTER_VERTICAL);description.setPadding(dp(6),dp(10),dp(2),dp(2));
+            LinearLayout words=new LinearLayout(host);words.setOrientation(LinearLayout.VERTICAL);words.addView(text(names[i],16,host.textColor(),true));words.addView(text(details[i],12,host.mutedColor(),false));
+            description.addView(words,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1));
+            RadioButton radio=new RadioButton(host);radio.setContentDescription("Use "+names[i]+" theme");radio.setChecked(selected);
+            radio.setButtonTintList(new ColorStateList(new int[][]{new int[]{android.R.attr.state_checked},new int[]{}},new int[]{host.accentColor(),host.mutedColor()}));
+            Runnable choose=()->{if(!id.equals(preferences.theme())){preferences.theme(id);host.recreate();}};
+            radio.setOnClickListener(v->choose.run());card.setOnClickListener(v->choose.run());card.setFocusable(true);card.setTag("theme-"+id);
+            description.addView(radio);card.addView(description);LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT);
+            params.topMargin=dp(14);sections.addView(card,params);
+        }
+        TextView note=text("Your choice applies to the library, player, settings and dialogs.",12,host.mutedColor(),false);
+        note.setPadding(dp(4),dp(18),dp(4),0);sections.addView(note);
+    }
+    private static final class ThemePreview extends View {
+        private final AppTheme palette;private final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
+        ThemePreview(android.content.Context context,AppTheme palette){super(context);this.palette=palette;}
+        @Override protected void onDraw(Canvas canvas){
+            float w=getWidth(),h=getHeight(),u=h/76f;
+            paint.setColor(palette.background);canvas.drawRect(0,0,w,h,paint);
+            paint.setColor(palette.accent);canvas.drawRoundRect(14*u,12*u,76*u,17*u,2*u,2*u,paint);
+            paint.setColor(palette.surface);canvas.drawRoundRect(12*u,27*u,w-12*u,h-11*u,10*u,10*u,paint);
+            paint.setColor(palette.raised);canvas.drawRoundRect(20*u,35*u,42*u,57*u,5*u,5*u,paint);
+            paint.setColor(palette.accent);canvas.drawCircle(31*u,46*u,6*u,paint);
+            paint.setColor(palette.text);canvas.drawRoundRect(52*u,36*u,w*.56f,41*u,2*u,2*u,paint);
+            paint.setColor(palette.muted);canvas.drawRoundRect(52*u,49*u,w*.43f,52*u,1*u,1*u,paint);
+            paint.setColor(palette.accent);canvas.drawCircle(w-33*u,46*u,12*u,paint);
+            paint.setColor(palette.onAccent);Path play=new Path();play.moveTo(w-36*u,41*u);play.lineTo(w-36*u,51*u);play.lineTo(w-28*u,46*u);play.close();canvas.drawPath(play,paint);
+        }
+    }
+
     private String themeName(){return "purple".equals(preferences.theme())?"Dark · Purple":"light".equals(preferences.theme())?"Light":"Dark · Orange";}
     private String sortName(){String[] labels={"Title A–Z","Title Z–A","Artist","Album","Date added","Duration"};return labels[Math.max(0,Math.min(labels.length-1,preferences.sort()))];}
     private void rootPage(){
         LinearLayout appearance=group("APPEARANCE");
-        action(appearance,R.drawable.ic_theme,"Theme","Colors and appearance",this::themeName,tools::theme);
+        action(appearance,R.drawable.ic_theme,"Theme","Colors and appearance",this::themeName,()->open("appearance",true));
         LinearLayout playback=group("PLAYBACK");
         action(playback,R.drawable.ic_settings,"Sound & playback","Speed, equalizer and transitions",null,()->open("sound",true));
         action(playback,R.drawable.ic_timer,"Sleep timer","Stop music automatically",()->host.player()==null?"Off":host.player().sleepDescription(),tools::sleepTimer);
@@ -159,7 +210,7 @@ final class SettingsScreen extends FrameLayout {
         TextView note=text("Audio effects depend on your device. Tracks without ReplayGain tags keep their original volume.",12,host.mutedColor(),false);
         note.setPadding(dp(4),dp(16),dp(4),0);sections.addView(note);
     }
-    private AlertDialog.Builder dialog(String title){return new AlertDialog.Builder(host,"light".equals(preferences.theme())?android.R.style.Theme_Material_Light_Dialog_Alert:android.R.style.Theme_Material_Dialog_Alert).setTitle(title).setOnDismissListener(d->refresh());}
+    private AlertDialog.Builder dialog(String title){return ThemeDialogs.builder(host).setTitle(title).setOnDismissListener(d->refresh());}
     private boolean connected(){if(player()!=null)return true;Toast.makeText(host,"The player is connecting. Try again.",Toast.LENGTH_SHORT).show();return false;}
     private void speed(){
         if(!connected())return;float[] speeds={.5f,.75f,1f,1.25f,1.5f,2f};String[] labels={"0.5×","0.75×","1×","1.25×","1.5×","2×"};int selected=2;

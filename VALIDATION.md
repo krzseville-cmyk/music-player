@@ -1,3 +1,15 @@
+# Version 3.3 theme validation
+
+- Android resource compilation, production Java / DEX compilation, alignment, signed APK generation, and instrumentation compilation passed.
+- **46 Android theme checks passed** on the Android 35 emulator. The suite switches Ember → Amethyst → Daylight → Ember through actual Appearance-card clicks and Activity recreation.
+- Verified the selected palette, Appearance-page and parent-navigation restoration, native app / dialog accent attributes, themed row ripples, switch tints, and paused playback after each theme change.
+- Primary, secondary, accent, and button text contrast is at least **4.5:1** in all three palettes. Secondary text contrast against card backgrounds: Ember **7.84:1**, Amethyst **7.79:1**, Daylight **4.94:1**. Accent text: **9.36:1**, **8.75:1**, **4.89:1**, respectively.
+- Native Android screenshots cover Settings, Sound & Playback, the speed picker, and Appearance for every theme: [previews](docs/THEMES.md). Native buttons use uppercase labels; the accessibility test runner accepts case differences when dismissing pickers.
+- Signed APK: [MusicPlayer-v3.3.apk](dist/MusicPlayer-v3.3.apk). Version **3.3**, code **6**, package `com.auss.musicplayer`, minimum API **24**, target API **35**.
+- Verified the existing signing certificate: `3fb413c86beccc6627a4c3be5de0a8cb4bfc15715d03ebbf2d02ab85ff037c73`.
+- APK SHA-256: `5cc5ef13c2653da31ce7f787eaf694e31a951bca03bcf2f35fa2ec3a6a63340e`.
+- The playback engine / file-format code is unchanged; earlier functional test results below are historical and were not rerun for this theme-only change. Physical devices, other Android versions, large-font / rotated dialogs, and system-owned pickers still need corresponding testing. System-owned UI follows the device's theme.
+
 # Version 3.2 settings validation
 
 - Built the native Android resources, all production Java sources, DEX, aligned APK, and instrumentation runner successfully.

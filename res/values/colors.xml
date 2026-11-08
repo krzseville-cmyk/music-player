@@ -1,0 +1,29 @@
+<resources>
+    <color name="ember_background">#141210</color>
+    <color name="ember_surface">#211D19</color>
+    <color name="ember_surface_raised">#322A23</color>
+    <color name="ember_accent">#FFB07A</color>
+    <color name="ember_on_accent">#301909</color>
+    <color name="ember_text">#FFF7ED</color>
+    <color name="ember_muted">#BFAF9E</color>
+    <color name="ember_player">#493022</color>
+    <color name="ember_ripple">#33FFB07A</color>
+    <color name="purple_background">#15131C</color>
+    <color name="purple_surface">#211E2D</color>
+    <color name="purple_surface_raised">#302A42</color>
+    <color name="purple_accent">#C5B3FF</color>
+    <color name="purple_on_accent">#261A47</color>
+    <color name="purple_text">#F7F2FF</color>
+    <color name="purple_muted">#B8AFCB</color>
+    <color name="purple_player">#342A4A</color>
+    <color name="purple_ripple">#33C5B3FF</color>
+    <color name="light_background">#FFFAF5</color>
+    <color name="light_surface">#F2E9DF</color>
+    <color name="light_surface_raised">#E7D8C9</color>
+    <color name="light_accent">#A34B1D</color>
+    <color name="light_on_accent">#FFFFFF</color>
+    <color name="light_text">#291D15</color>
+    <color name="light_muted">#726150</color>
+    <color name="light_player">#F2D6C1</color>
+    <color name="light_ripple">#1FA34B1D</color>
+</resources>
