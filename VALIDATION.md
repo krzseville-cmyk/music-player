@@ -1,3 +1,14 @@
+# Version 3.1 design validation
+
+- Android resources / Java / DEX compilation, APK alignment, and signature verification passed.
+- **10 Android design checks passed** on the Android 35 emulator: service binding, fixture playback, embedded MP3 art loading via the new fallback, Continue Listening visibility and the actual current title, Up Next matching the queue, Resume starting playback and opening the player, and Favorites navigation / hiding the overview outside the Songs tab.
+- Inspected native Android screenshots using six generated local audio fixtures. No production demo library was added. Screenshots: [library](docs/screenshots/library-v3.1.png), [player](docs/screenshots/player-v3.1.png).
+- Playback engine unchanged from version 3.0. Its earlier playback / restart and format results are retained below; those suites were not rerun for this visual refinement.
+- Signed APK: [MusicPlayer-v3.1.apk](dist/MusicPlayer-v3.1.apk). Package `com.auss.musicplayer`; version name **3.1**, code **4**; minimum API **24**, target API **35**.
+- Same signing certificate as version 3.0: `3fb413c86beccc6627a4c3be5de0a8cb4bfc15715d03ebbf2d02ab85ff037c73`.
+- APK SHA-256: `5d7311a404c8965430ef852b7fb5c9595943591a8f023c47b88a1ee600dc47e8`.
+- Physical-device / host limitations from version 3.0 still apply. Large-font and small-screen behavior has a scroll fallback; it has not been exhaustively exercised across devices.
+
 # Version 3 validation
 
 Built with JDK 21, Android platform 35, build-tools 35.0.0, and D8 with minimum API 24.

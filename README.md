@@ -2,9 +2,17 @@
 
 A native, offline Android music player. Android 7.0 (API 24) or newer; no account or network permission required.
 
-[Download the signed APK](dist/MusicPlayer-v3.apk) · [Library preview](docs/screenshots/library.png) · [Player preview](docs/screenshots/player.png)
+[Download version 3.1](dist/MusicPlayer-v3.1.apk) · [Library preview](docs/screenshots/library-v3.1.png) · [Player preview](docs/screenshots/player-v3.1.png)
 
-## Version 3
+## Version 3.1 design refinement
+
+- A gradient Continue Listening card with real cover art, the current track, and a Resume action.
+- Favorites / recent-history shortcuts with live counts, numbered song rows, separate duration labels, selected-track outlines, and readable sort labels.
+- A more detailed player with playback-speed information, an Up Next card that follows shuffle/repeat, spaced actions, a refined mini-player, and a scrollable layout for compact screens.
+- Embedded MP3 cover-art fallback when a document or audio URI has no platform thumbnail; a theme-aware record sleeve when no artwork exists.
+- Version name **3.1**, version code **4**. App name and package remain Music Player / `com.auss.musicplayer`.
+
+## Version 3 features
 
 - Redesigned library and now-playing screens: warm Ember colors, rounded artwork, accessible controls, and Amethyst / Daylight themes.
 - Songs, albums, artists, saved playlists, favorites, folders, and listening history (recent / most played).

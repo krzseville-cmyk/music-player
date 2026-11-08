@@ -10,6 +10,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.io.*;
 import android.net.Uri;
 import android.graphics.Bitmap;
+import android.view.View;
+import android.widget.TextView;
 
 /** Run against an emulator populated with at least two 18-second local music fixtures. */
 public final class PlayerIntegrationTests extends Instrumentation {
@@ -38,7 +40,9 @@ public final class PlayerIntegrationTests extends Instrumentation {
             MainActivity activity = (MainActivity)startActivitySync(new Intent(getTargetContext(),MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             getTargetContext().bindService(new Intent(getTargetContext(),MusicService.class),connection,Context.BIND_AUTO_CREATE);
             waitFor(()->player!=null,"service binds");
-            if (arguments!=null && "restore".equals(arguments.getString("phase"))) {
+            if (arguments!=null && "design".equals(arguments.getString("phase"))) {
+                designPreview(activity);
+            } else if (arguments!=null && "restore".equals(arguments.getString("phase"))) {
                 check(()->player.getQueue().size()==2,"queue restored");
                 check(()->player.getIndex()==1,"current index restored");
                 check(()->!player.isPlaying(),"restoration is paused");
@@ -98,16 +102,49 @@ public final class PlayerIntegrationTests extends Instrumentation {
     }
     private List<Song> privateFixtures() throws Exception {
         List<Song> songs=new ArrayList<>();
-        String[] names={"01 Sunset Drive.mp3","02 Blue Hour.mp3"};
+        String[] names={"01 Sunset Drive.mp3","02 Blue Hour.mp3","03 Somewhere Slow.mp3","04 Golden.mp3","05 Moonlit.mp3","06 Soft Focus.mp3"};
         for(int i=0;i<names.length;i++) {
             File file=new File(getTargetContext().getFilesDir(),names[i]);
             try(InputStream in=getContext().getAssets().open(names[i]);OutputStream out=new FileOutputStream(file)){Mp3Metadata.copy(in,out);}
-            Song song=new Song(-100-i,names[i].substring(3,names[i].length()-4),"Studio Sessions","After Hours",-100,18000,i+1,Uri.fromFile(file));
+            Song song=new Song(-100-i,names[i].substring(3,names[i].length()-4),"Studio Sessions",i<2 ? "After Hours" : i<4 ? "Slow Sunday" : "Daydream",-100-i/2,18000,i+1,Uri.fromFile(file));
             song.fileName=names[i];song.folder="Test fixtures/";songs.add(song);
         }
         return songs;
     }
+    private Object field(MainActivity activity,String name) {
+        try { java.lang.reflect.Field field=MainActivity.class.getDeclaredField(name);field.setAccessible(true);return field.get(activity); }
+        catch(Exception e){throw new RuntimeException(e);}
+    }
+    private void invoke(MainActivity activity,String name) {
+        try {java.lang.reflect.Method method=MainActivity.class.getDeclaredMethod(name);method.setAccessible(true);method.invoke(activity);}
+        catch(Exception e){throw new RuntimeException(e);}
+    }
+    private void designPreview(MainActivity activity) throws Exception {
+        List<Song> songs=privateFixtures();
+        runOnMainSync(()->{player.setCrossfade(0);player.playQueue(songs,0);});
+        waitFor(()->player.isPlaying(),"design fixture starts");
+        runOnMainSync(()->player.pause());
+        CountDownLatch artReady=new CountDownLatch(1);AtomicReference<Bitmap> art=new AtomicReference<>();
+        runOnMainSync(()->ArtLoader.load(getTargetContext(),songs.get(0),320,bitmap->{art.set(bitmap);artReady.countDown();}));
+        if(!artReady.await(30,TimeUnit.SECONDS)||art.get()==null)throw new AssertionError("embedded MP3 cover loads through fallback");checks++;
+        preview(activity,songs,false);
+        check(()->((View)field(activity,"overview")).getVisibility()==View.VISIBLE,"continue-listening card visible");
+        check(()->((TextView)field(activity,"overviewTitle")).getText().toString().equals(songs.get(0).title),"continue card shows actual track");
+        check(()->((TextView)field(activity,"nextTitle")).getText().toString().contains(songs.get(1).title),"up-next panel matches queue");
+        runOnMainSync(()->((View)field(activity,"overviewAction")).performClick());
+        waitFor(()->player.isPlaying(),"resume card resumes playback");
+        check(()->((View)field(activity,"npView")).getVisibility()==View.VISIBLE,"resume opens player");
+        runOnMainSync(()->{player.pause();invoke(activity,"hideOverlays");((View)field(activity,"favoritesShortcut")).performClick();});
+        check(()->((Integer)field(activity,"tab"))==2,"favorites shortcut navigates");
+        check(()->((View)field(activity,"overview")).getVisibility()==View.GONE,"overview hidden in favorites");
+        runOnMainSync(()->{
+            try {java.lang.reflect.Method select=MainActivity.class.getDeclaredMethod("selectTab",int.class);select.setAccessible(true);select.invoke(activity,0);}
+            catch(Exception e){throw new RuntimeException(e);}
+        });
+        preview(activity,songs,false);preview(activity,songs,true);
+    }
     private void preview(MainActivity activity,List<Song> songs,boolean nowPlaying) throws Exception {
+        dismissEmulatorAnr();
         runOnMainSync(()->{
             try {
                 java.lang.reflect.Method build=MainActivity.class.getDeclaredMethod("buildLibrary",List.class);build.setAccessible(true);build.invoke(activity,songs);
@@ -116,8 +153,19 @@ public final class PlayerIntegrationTests extends Instrumentation {
             }catch(Exception e){throw new RuntimeException(e);}
         });
         Thread.sleep(1500);
+        dismissEmulatorAnr();
         Bitmap bitmap=getUiAutomation().takeScreenshot();
         if(bitmap!=null)try(OutputStream out=new FileOutputStream(new File(getTargetContext().getFilesDir(),nowPlaying?"preview-player.png":"preview-library.png"))){bitmap.compress(Bitmap.CompressFormat.PNG,100,out);}
+    }
+    private void dismissEmulatorAnr() throws Exception {
+        android.view.accessibility.AccessibilityNodeInfo root=getUiAutomation().getRootInActiveWindow();
+        if(root==null)return;
+        List<android.view.accessibility.AccessibilityNodeInfo> nodes=root.findAccessibilityNodeInfosByText("Wait");
+        for(android.view.accessibility.AccessibilityNodeInfo node:nodes){
+            android.view.accessibility.AccessibilityNodeInfo clickable=node;
+            while(clickable!=null&&!clickable.isClickable())clickable=clickable.getParent();
+            if(clickable!=null&&clickable.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)){Thread.sleep(1000);return;}
+        }
     }
     private void browser() throws Exception {
         CountDownLatch connected=new CountDownLatch(1), loaded=new CountDownLatch(1);

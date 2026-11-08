@@ -5,6 +5,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.media.MediaMetadataRetriever;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -69,7 +70,8 @@ public final class ArtLoader {
     private static Bitmap loadSync(Context context, Song song, int size) {
         try {
             if (Build.VERSION.SDK_INT >= 29) {
-                return context.getContentResolver().loadThumbnail(song.uri, new Size(size, size), null);
+                Bitmap thumbnail = context.getContentResolver().loadThumbnail(song.uri, new Size(size, size), null);
+                if (thumbnail != null) return thumbnail;
             }
             Uri artUri = ContentUris.withAppendedId(
                     Uri.parse("content://media/external/audio/albumart"), song.albumId);
@@ -86,8 +88,21 @@ public final class ArtLoader {
                 if (in == null) return null;
                 return BitmapFactory.decodeStream(in, null, opts);
             }
-        } catch (Exception e) {
-            return null;
-        }
+        } catch (Exception ignored) { }
+        MediaMetadataRetriever reader = new MediaMetadataRetriever();
+        try {
+            reader.setDataSource(context,song.uri);
+            byte[] cover = reader.getEmbeddedPicture();
+            if (cover == null || cover.length > 10*1024*1024) return null;
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            BitmapFactory.decodeByteArray(cover,0,cover.length,options);
+            if (options.outWidth <= 0 || options.outHeight <= 0) return null;
+            options.inSampleSize = 1;
+            while (Math.max(options.outWidth,options.outHeight)/(options.inSampleSize*2) >= size) options.inSampleSize *= 2;
+            options.inJustDecodeBounds = false;
+            return BitmapFactory.decodeByteArray(cover,0,cover.length,options);
+        } catch (Exception ignored) { return null; }
+        finally { try { reader.release(); } catch (Exception ignored) { } }
     }
 }
