@@ -1,3 +1,12 @@
+# Version 4.3 · Gold vinyl launcher icon
+
+- Replaced the black / red launcher record with a metallic gold vinyl design. Exported legacy icons at 48 / 72 / 96 / 144 / 192 px and adaptive foregrounds at 108 / 162 / 216 / 324 / 432 px with transparent padding. Adaptive dark background and launcher resource references are unchanged.
+- Visually inspected the generated design and actual 192 px launcher asset; checked all ten PNG dimensions / RGBA output. Resource / Java / DEX compilation, alignment, and signature verification passed.
+- APK metadata confirms Simple Player, package `simple.music.player`, version **4.3**, code **16**, minimum API **24**, target API **35**.
+- Certificate remains `3fb413c86beccc6627a4c3be5de0a8cb4bfc15715d03ebbf2d02ab85ff037c73`.
+- APK SHA-256: `fefca741ca823f3053b8ffcd5475aff2f09612f9749725ff76700f1f6f5a572c`.
+- This is a launcher-art update; runtime suites were not rerun. Earlier layout and playback results below are historical.
+
 # Version 4.2 · Simpler music library
 
 - Replaced the large library heading / statistics and Continue Listening section with a compact Simple Player heading, search, underlined tabs, and one count / sort toolbar. Favorites and History remain available in the category tabs; the bottom player provides resume and Now Playing access.

@@ -4,6 +4,11 @@ A native local-music player for Android 7.0 (API 24) or newer. Playback and save
 
 [Download Simple Player](<dist/Simple Player.apk>) · [Library preview](docs/screenshots/library-v4.2.png) · [Lyrics preview](docs/screenshots/now-playing-lyrics-v3.6.png) · [Theme previews](docs/THEMES.md)
 
+## Version 4.3 · Gold vinyl icon
+
+- Launcher icon now uses a metallic gold vinyl record ([preview](res/mipmap-xxxhdpi/ic_launcher.png)), including the adaptive foreground and all legacy density sizes. The dark adaptive background is retained.
+- Version **4.3**, code **16**; app identity, library design, and playback are unchanged.
+
 ## Version 4.2 · Simpler music library
 
 - Compact Simple Player heading, search, underlined category tabs, and a single count / sort toolbar put the song list first. Removed the large Continue Listening card and duplicate Favorites / Recent shortcut cards; those collections remain in the tabs.
