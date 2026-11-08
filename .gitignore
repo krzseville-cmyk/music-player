@@ -34,3 +34,21 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# Private signing configuration / exported secrets
+.env
+.env.*
+!.env.example
+key.properties
+keystore.properties
+signing.properties
+.secrets/
+secrets/
+*.p12
+*.pfx
+*.key
+*.pem
+*.keystore.b64
+*.jks.b64
+*.p12.b64
+*.pfx.b64

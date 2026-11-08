@@ -1,3 +1,12 @@
+# Private signing workflow · Build infrastructure
+
+- Removed the original uploaded source ZIP from the current tracked files because it contained `musicplayer.keystore`. A private local backup was retained. No Git history was rewritten; the earlier key remains exposed through history / prior copies and requires a planned signing-key rotation. The distributed APK signing identity is unchanged.
+- Added a manual, main-only GitHub Actions workflow with read-only repository permissions, fixed action commit references, and signing credentials scoped to the signing step. It decodes `MUSIC_KEYSTORE_BASE64` into a permission-restricted runner temporary file, passes passwords through existing `env:` signing options, deletes the key on success / failure, and uploads only the signed APK.
+- Added ignore rules for environment files, signing properties, private key formats, secret directories, and Base64 keystore exports. Confirmed representative private filenames match these rules.
+- YAML structure / trigger / action pins and Bash syntax checked. Exercised the actual signing-step shell locally: missing-secret rejection, invalid Base64 rejection and cleanup, successful APK signing using a disposable JKS with distinct randomly generated store / key passwords, successful cleanup, and no secret values in captured output all passed.
+- Real GitHub repository secrets were not read, set, or printed. The hosted workflow was not run; the repository owner must configure its three signing secrets before dispatching it. The public `android` debug/test password remains a development convention, not a production secret.
+- App code, version, and canonical `dist/Simple Player.apk` unchanged; SHA-256 remains `baeda5f099b385c21da615d39cc501456dd7e5f68c81f2df7071179351cd7bec`.
+
 # Version 4.1 · Route-independent software effects
 
 - Replaced the native effect dependency with MediaExtractor / MediaCodec decoding, per-stream software PCM filters, and AudioTrack output. Equalizer / bass processing occurs before Android output routing; native Equalizer, BassBoost, and LoudnessEnhancer are no longer required. This processes Simple Player audio, not other apps.
