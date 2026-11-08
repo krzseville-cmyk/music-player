@@ -1,3 +1,15 @@
+# Version 3.2 settings validation
+
+- Built the native Android resources, all production Java sources, DEX, aligned APK, and instrumentation runner successfully.
+- **14 Android settings checks passed** on the Android 35 emulator: service binding; full-screen Settings entry; nested sound navigation; ReplayGain switch and saved-preference update; gapless switch; speed selection without starting playback; crossfade selection; gapless availability / restored state; and Back navigation from nested and direct sound entry points.
+- The tests used actual accessibility clicks for speed / crossfade choices. Screenshots: [Settings](docs/screenshots/settings-v3.2.png), [Sound & playback](docs/screenshots/settings-sound-v3.2.png), [Audio effects](docs/screenshots/settings-effects-v3.2.png).
+- Native back handling also uses Android's back dispatcher on API 33+. Settings saves its page during Activity recreation so theme changes can return to the same page; theme recreation and other Android versions were not exercised by this suite.
+- Playback engine and file-format implementation unchanged. Their older results below are retained as historical evidence and were not rerun for this settings UI change.
+- Signed APK: [MusicPlayer-v3.2.apk](dist/MusicPlayer-v3.2.apk). Version **3.2**, code **5**, package `com.auss.musicplayer`, minimum API **24**, target API **35**.
+- Signature verified against the existing app certificate: `3fb413c86beccc6627a4c3be5de0a8cb4bfc15715d03ebbf2d02ab85ff037c73`.
+- APK SHA-256: `904d45b12be7835c4979530e648154579e34144c41876e5345914efcab201eb4`.
+- Real-device equalizer capabilities, system permission navigation, document pickers, large-font layouts, and manufacturer-specific behavior still need physical-device testing.
+
 # Version 3.1 design validation
 
 - Android resources / Java / DEX compilation, APK alignment, and signature verification passed.

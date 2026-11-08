@@ -2,7 +2,15 @@
 
 A native, offline Android music player. Android 7.0 (API 24) or newer; no account or network permission required.
 
-[Download version 3.1](dist/MusicPlayer-v3.1.apk) · [Library preview](docs/screenshots/library-v3.1.png) · [Player preview](docs/screenshots/player-v3.1.png)
+[Download version 3.2](dist/MusicPlayer-v3.2.apk) · [Settings preview](docs/screenshots/settings-v3.2.png) · [Sound settings](docs/screenshots/settings-sound-v3.2.png) · [Player preview](docs/screenshots/player-v3.1.png)
+
+## Version 3.2 settings
+
+- A dedicated, scrollable Settings screen with Appearance, Playback, Music Library, and About sections, descriptive icons, current values, and a Back button.
+- A separate Sound & Playback page with native switches for gapless playback and ReplayGain, radio choices for speed / crossfade / equalizer, and a bass-strength slider.
+- Clear transition behavior: gapless is shown as unavailable while crossfade is active; its saved preference returns when crossfade is turned off.
+- Settings values refresh after changes. Theme changes recreate the interface while keeping the Settings page open. Back from a nested sound page returns to Settings; direct sound entry from the player returns to the player.
+- Version **3.2**, code **5**, with the same Music Player name, `com.auss.musicplayer` package, and signing certificate.
 
 ## Version 3.1 design refinement
 

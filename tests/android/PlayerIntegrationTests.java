@@ -40,7 +40,9 @@ public final class PlayerIntegrationTests extends Instrumentation {
             MainActivity activity = (MainActivity)startActivitySync(new Intent(getTargetContext(),MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             getTargetContext().bindService(new Intent(getTargetContext(),MusicService.class),connection,Context.BIND_AUTO_CREATE);
             waitFor(()->player!=null,"service binds");
-            if (arguments!=null && "design".equals(arguments.getString("phase"))) {
+            if (arguments!=null && "settings".equals(arguments.getString("phase"))) {
+                settingsPreview(activity);
+            } else if (arguments!=null && "design".equals(arguments.getString("phase"))) {
                 designPreview(activity);
             } else if (arguments!=null && "restore".equals(arguments.getString("phase"))) {
                 check(()->player.getQueue().size()==2,"queue restored");
@@ -114,6 +116,66 @@ public final class PlayerIntegrationTests extends Instrumentation {
     private Object field(MainActivity activity,String name) {
         try { java.lang.reflect.Field field=MainActivity.class.getDeclaredField(name);field.setAccessible(true);return field.get(activity); }
         catch(Exception e){throw new RuntimeException(e);}
+    }
+    private void settingsPreview(MainActivity activity) throws Exception {
+        runOnMainSync(activity::showSettings);
+        SettingsScreen screen=(SettingsScreen)field(activity,"settingsScreen");
+        check(()->screen.getVisibility()==View.VISIBLE&&screen.page().equals("root"),"dedicated settings screen opens");
+        capture("preview-settings.png");
+        runOnMainSync(()->screen.findViewWithTag("Sound & playback").performClick());
+        check(()->screen.page().equals("sound")&&screen.hasRootParent(),"sound settings opens as a nested page");
+        boolean originalGain=player.normalization(),originalGapless=player.gapless();float originalSpeed=player.getSpeed();int originalFade=player.crossfadeSeconds();
+        runOnMainSync(()->{player.setCrossfade(0);screen.refresh();});
+        android.widget.Switch gain=(android.widget.Switch)screen.findViewWithTag("ReplayGain");
+        runOnMainSync(gain::toggle);
+        check(()->player.normalization()!=originalGain,"ReplayGain switch changes player preference");
+        check(()->getTargetContext().getSharedPreferences("player",0).getBoolean("normalization",false)==player.normalization(),"ReplayGain setting persists");
+        runOnMainSync(gain::toggle);
+        android.widget.Switch gapless=(android.widget.Switch)screen.findViewWithTag("Gapless playback");
+        runOnMainSync(gapless::toggle);
+        check(()->player.gapless()!=originalGapless,"gapless switch updates the player");
+        runOnMainSync(gapless::toggle);
+        runOnMainSync(()->screen.findViewWithTag("Playback speed").performClick());
+        clickText("1.25×");waitFor(()->player.getSpeed()==1.25f,"speed selection applies");
+        check(()->!player.isPlaying(),"changing a setting does not start playback");
+        runOnMainSync(()->screen.findViewWithTag("Crossfade").performClick());
+        clickText("3 seconds");waitFor(()->player.crossfadeSeconds()==3,"crossfade selection applies");
+        check(()->!gapless.isEnabled()&&!gapless.isChecked(),"gapless is unavailable while crossfade is active");
+        runOnMainSync(()->{player.setCrossfade(0);screen.refresh();});
+        check(()->gapless.isEnabled()&&gapless.isChecked()==originalGapless,"gapless state returns when crossfade is off");
+        capture("preview-settings-sound.png");
+        runOnMainSync(()->{
+            android.widget.ScrollView scroll=findScroll(screen);scroll.fullScroll(View.FOCUS_DOWN);
+        });Thread.sleep(500);capture("preview-settings-effects.png");
+        runOnMainSync(activity::onBackPressed);
+        check(()->screen.getVisibility()==View.VISIBLE&&screen.page().equals("root"),"back from sound returns to settings");
+        runOnMainSync(activity::onBackPressed);
+        check(()->screen.getVisibility()==View.GONE,"back from settings returns to music");
+        runOnMainSync(activity::showSoundSettings);runOnMainSync(activity::onBackPressed);
+        check(()->screen.getVisibility()==View.GONE,"direct sound entry returns to its caller");
+        runOnMainSync(()->{player.setSpeed(originalSpeed);player.setCrossfade(originalFade);player.setGapless(originalGapless);player.setNormalization(originalGain);});
+    }
+    private android.widget.ScrollView findScroll(View view){
+        if(view instanceof android.widget.ScrollView)return (android.widget.ScrollView)view;
+        if(view instanceof android.view.ViewGroup)for(int i=0;i<((android.view.ViewGroup)view).getChildCount();i++){
+            android.widget.ScrollView found=findScroll(((android.view.ViewGroup)view).getChildAt(i));if(found!=null)return found;
+        }return null;
+    }
+    private void clickText(String label) throws Exception {
+        dismissEmulatorAnr();long end=SystemClock.elapsedRealtime()+20000;
+        while(SystemClock.elapsedRealtime()<end){
+            android.view.accessibility.AccessibilityNodeInfo root=getUiAutomation().getRootInActiveWindow();
+            if(root!=null)for(android.view.accessibility.AccessibilityNodeInfo node:root.findAccessibilityNodeInfosByText(label)){
+                if(node.getText()==null||!node.getText().toString().equals(label))continue;
+                while(node!=null&&!node.isClickable())node=node.getParent();
+                if(node!=null&&node.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK))return;
+            }Thread.sleep(100);
+        }throw new AssertionError("Cannot select "+label);
+    }
+    private void capture(String name) throws Exception {
+        Thread.sleep(1000);dismissEmulatorAnr();Thread.sleep(300);
+        Bitmap image=getUiAutomation().takeScreenshot();if(image==null)throw new AssertionError("Screenshot unavailable");
+        try(OutputStream out=new FileOutputStream(new File(getTargetContext().getFilesDir(),name))){image.compress(Bitmap.CompressFormat.PNG,100,out);}
     }
     private void invoke(MainActivity activity,String name) {
         try {java.lang.reflect.Method method=MainActivity.class.getDeclaredMethod(name);method.setAccessible(true);method.invoke(activity);}

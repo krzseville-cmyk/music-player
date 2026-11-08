@@ -39,7 +39,7 @@ final class PlayerTools {
     void close() { handler.removeCallbacksAndMessages(null); if (lyricDialog != null) lyricDialog.dismiss(); if (tagDialog != null) tagDialog.dismiss(); io.shutdown(); }
     private AlertDialog.Builder dialog(String title) {
         return new AlertDialog.Builder(host, "light".equals(prefs.theme())
-                ? android.R.style.Theme_Material_Light_Dialog_Alert : android.R.style.Theme_Material_Dialog_Alert).setTitle(title);
+                ? android.R.style.Theme_Material_Light_Dialog_Alert : android.R.style.Theme_Material_Dialog_Alert).setTitle(title).setOnDismissListener(d -> host.refreshSettings());
     }
     private void ui(Runnable run) { handler.post(() -> { if (!host.isDestroyed() && !host.isFinishing()) run.run(); }); }
     private void message(String text) { ui(() -> Toast.makeText(host, text, Toast.LENGTH_LONG).show()); }
@@ -53,34 +53,21 @@ final class PlayerTools {
         try { host.startActivityForResult(intent, code); }
         catch (android.content.ActivityNotFoundException e) { message("No document picker is installed on this device."); }
     }
-    void settings() {
-        String[] options = {"Sort songs", "Choose theme", "Exclude folders", "Rescan library", "Import M3U playlist…", "Sound & playback", "Sleep timer", "Edit an MP3 file…"};
-        dialog("Make it yours").setItems(options, (d, which) -> {
-            switch (which) {
-                case 0: sort(); break;
-                case 1: theme(); break;
-                case 2: excludeFolders(); break;
-                case 3: host.reloadLibrary(); break;
-                case 4: pick(IMPORT, "*/*"); break;
-                case 5: sound(); break;
-                case 6: sleepTimer(); break;
-                case 7: chooseMp3(); break;
-            }
-        }).setNegativeButton("Done", null).show();
-    }
+    void settings() { host.showSettings(); }
+    void importPlaylist() { pick(IMPORT, "*/*"); }
     void sort() {
         dialog("Sort songs").setSingleChoiceItems(new String[]{"Title · A–Z", "Title · Z–A", "Artist", "Album", "Recently added", "Duration · longest first"}, prefs.sort(), (d, which) -> {
             prefs.sort(which); host.repaint(); d.dismiss();
         }).setNegativeButton("Cancel", null).show();
     }
-    private void theme() {
+    void theme() {
         String[] values = {"ember", "purple", "light"};
         int selected = Arrays.asList(values).indexOf(prefs.theme());
-        dialog("Choose your atmosphere").setSingleChoiceItems(new String[]{"Ember · warm & dark", "Amethyst · purple & dark", "Daylight · light"}, selected, (d, which) -> {
+        dialog("Theme").setSingleChoiceItems(new String[]{"Dark · Orange", "Dark · Purple", "Light"}, selected, (d, which) -> {
             prefs.theme(values[which]); d.dismiss(); host.recreate();
         }).setNegativeButton("Cancel", null).show();
     }
-    private void excludeFolders() {
+    void excludeFolders() {
         TreeSet<String> folders = new TreeSet<>();
         for (Song song : host.scannedSongs()) folders.add(song.folder);
         if (folders.isEmpty()) { message("Scan your music library first."); return; }
@@ -103,35 +90,7 @@ final class PlayerTools {
             player.setSleepTimer(minutes[which], which == 5); message(player.sleepDescription());
         }).setNegativeButton("Cancel", null).show();
     }
-    void sound() {
-        MusicService player = host.player();
-        if (player == null) return;
-        String[] options = {"Playback speed · " + player.getSpeed() + "×", "Equalizer presets", "Bass boost",
-                "Gapless playback · " + (player.gapless() ? "on" : "off"),
-                "ReplayGain · " + (player.normalization() ? "on" : "off"), "Crossfade · " + player.crossfadeSeconds() + " seconds"};
-        dialog("Sound & playback").setItems(options, (d, which) -> {
-            switch (which) {
-                case 0:
-                    String[] speeds = {"0.5×", "0.75×", "1×", "1.25×", "1.5×", "2×"};
-                    float[] values = {.5f,.75f,1f,1.25f,1.5f,2f};
-                    dialog("Playback speed").setItems(speeds, (a,b) -> player.setSpeed(values[b])).show(); break;
-                case 1:
-                    String[] presets = player.equalizerPresets();
-                    if (presets.length == 0) { message("Start a song first. Equalizer support also depends on your device."); return; }
-                    String[] labels = new String[presets.length+1]; labels[0] = "Off"; System.arraycopy(presets,0,labels,1,presets.length);
-                    dialog("Equalizer").setItems(labels, (a,b) -> player.equalizerPreset(b-1)).show(); break;
-                case 2:
-                    LinearLayout col = column(); col.addView(label("Bass strength"));
-                    SeekBar bar = new SeekBar(host); bar.setMax(1000); bar.setProgress(host.getSharedPreferences("player",0).getInt("bass",0)); col.addView(bar);
-                    dialog("Bass boost").setView(col).setPositiveButton("Apply", (a,b) -> player.setBass(bar.getProgress())).setNegativeButton("Cancel",null).show(); break;
-                case 3: player.setGapless(!player.gapless()); sound(); break;
-                case 5:
-                    int[] durations = {0,3,5,8};
-                    dialog("Crossfade").setItems(new String[]{"Off", "3 seconds", "5 seconds", "8 seconds"}, (a,b) -> player.setCrossfade(durations[b])).show(); break;
-                case 4: player.setNormalization(!player.normalization()); message("ReplayGain uses embedded track gain tags. Untagged tracks keep their original volume."); break;
-            }
-        }).setNegativeButton("Done", null).show();
-    }
+    void sound() { host.showSoundSettings(); }
     void exportPlaylist(String name, List<Song> songs) {
         prefs.prefs.edit().putString("pendingM3U", PlaylistIO.export(songs)).apply();
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)

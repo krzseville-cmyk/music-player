@@ -146,6 +146,26 @@ public class MainActivity extends Activity implements MusicService.Listener {
     private PlaylistStore playlists;
     private LibraryPreferences preferences;
     private PlayerTools tools;
+    private SettingsScreen settingsScreen;
+    private FrameLayout screenRoot;
+    private android.window.OnBackInvokedCallback backCallback;
+    void showSettings() { openSettings("root",false); }
+    void showSoundSettings() { openSettings("sound",false); }
+    private void openSettings(String page,boolean parent) {
+        hideKeyboard();
+        settingsScreen.open(page,parent);
+        setSettingsAccessibility(true);
+    }
+    void closeSettings() {
+        settingsScreen.setVisibility(View.GONE);
+        setSettingsAccessibility(false);
+    }
+    void refreshSettings() { if(settingsScreen!=null)settingsScreen.refresh(); }
+    private void setSettingsAccessibility(boolean visible) {
+        if(screenRoot==null)return;
+        for(int i=0;i<screenRoot.getChildCount();i++)if(screenRoot.getChildAt(i)!=settingsScreen)
+            screenRoot.getChildAt(i).setImportantForAccessibility(visible?View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS:View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);
+    }
     private final List<Song> scannedSongs = new ArrayList<>();
     private String selectedFolder;
     private boolean mostPlayed;
@@ -284,6 +304,12 @@ public class MainActivity extends Activity implements MusicService.Listener {
         View root = buildUi();
         setContentView(root);
         setupWindow(root);
+        if(savedInstanceState!=null && savedInstanceState.containsKey("settingsPage"))
+            openSettings(savedInstanceState.getString("settingsPage","root"),savedInstanceState.getBoolean("settingsParent",false));
+        if(Build.VERSION.SDK_INT>=33) {
+            backCallback=this::onBackPressed;
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,backCallback);
+        }
 
         Intent intent = new Intent(this, MusicService.class);
         startService(intent);
@@ -310,6 +336,14 @@ public class MainActivity extends Activity implements MusicService.Listener {
         super.onResume();
         // Returning from the settings screen after granting the permission.
         if (!songsLoaded && hasAudioPermission()) loadSongs();
+        refreshSettings();
+    }
+
+    @Override protected void onSaveInstanceState(Bundle state) {
+        super.onSaveInstanceState(state);
+        if(settingsScreen!=null && settingsScreen.getVisibility()==View.VISIBLE) {
+            state.putString("settingsPage",settingsScreen.page());state.putBoolean("settingsParent",settingsScreen.hasRootParent());
+        }
     }
 
     @Override
@@ -329,11 +363,13 @@ public class MainActivity extends Activity implements MusicService.Listener {
         if (service != null) service.removeListener(this);
         if (bound) unbindService(connection);
         if (tools != null) tools.close();
+        if(Build.VERSION.SDK_INT>=33 && backCallback!=null)getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(backCallback);
         super.onDestroy();
     }
 
     @Override
     public void onBackPressed() {
+        if(settingsScreen!=null && settingsScreen.back())return;
         if (queueView.getVisibility() == View.VISIBLE) {
             hideQueue();
         } else if (npView.getVisibility() == View.VISIBLE) {
@@ -1012,6 +1048,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
 
     @Override
     public void onPlayerChanged() {
+        refreshSettings();
         if (service == null) return;
         rowAdapter.notifyDataSetChanged();
         albumAdapter.notifyDataSetChanged();
@@ -1070,6 +1107,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
     }
 
     private void updateProgress() {
+        refreshSettings();
         if (service == null || service.getCurrentSong() == null) return;
         if (timerButton != null) timerButton.setText("Off".equals(service.sleepDescription()) ? "Sleep timer" : service.sleepDescription());
         int dur = Math.max(service.getDuration(), 1);
@@ -1104,6 +1142,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
     }
 
     private void showNowPlaying() {
+        if(settingsScreen!=null && settingsScreen.getVisibility()==View.VISIBLE)closeSettings();
         if (service == null || service.getCurrentSong() == null) return;
         hideKeyboard();
         if (npView.getVisibility() == View.VISIBLE) return;
@@ -1403,6 +1442,7 @@ public class MainActivity extends Activity implements MusicService.Listener {
 
     private View buildUi() {
         FrameLayout root = new FrameLayout(this);
+        screenRoot=root;
         root.setBackgroundColor(BG);
         root.addView(buildMain(), new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -1410,6 +1450,8 @@ public class MainActivity extends Activity implements MusicService.Listener {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         root.addView(buildQueue(), new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        settingsScreen=new SettingsScreen(this,tools,preferences);
+        root.addView(settingsScreen,new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT));
         return root;
     }
 
