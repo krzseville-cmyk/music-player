@@ -1,3 +1,14 @@
+# Version 3.4 · Simple Player identity validation
+
+- Built, aligned, and signed **`dist/Simple Player.apk`**. APK metadata confirms application label **Simple Player**, package **`simple.music.player`**, launcher **`simple.music.player.MainActivity`**, version **3.4**, code **7**, minimum API **24**, target API **35**.
+- Source and test packages moved to `simple.music.player`; source paths are `src/simple/music/player/` and `tests/simple/music/player/`. Widget branding, About text, playback action strings, media-session tag, build outputs, and instrumentation targets were updated.
+- DEX namespace inspection confirms the new launcher class is present and the old `com.auss.musicplayer` class namespace is absent from the current APK.
+- **27 host feature checks passed** under the renamed package. **15 Android identity / smoke checks passed** after a fresh install: app package / label, resource namespace, launcher, playback and browser services, widget label, action strings, Settings branding, actual playback / pause, and media-browser root categories.
+- Signature verified; certificate remains `3fb413c86beccc6627a4c3be5de0a8cb4bfc15715d03ebbf2d02ab85ff037c73`.
+- APK SHA-256: `8ded6115fddf5bd67260f0e3be88536a54280b4bd9dfff59e797ea59e44357c6`.
+- The new application ID installs separately from the old app. Its private playlists, favorites, history, settings, and checkpoints do not migrate automatically. Shared audio files remain accessible after granting the new app audio permission.
+- Theme layouts and playback implementation are unchanged apart from branding and namespace references. Prior-version tests below are retained as historical evidence.
+
 # Version 3.3 theme validation
 
 - Android resource compilation, production Java / DEX compilation, alignment, signed APK generation, and instrumentation compilation passed.

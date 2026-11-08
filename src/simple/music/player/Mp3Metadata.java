@@ -1,4 +1,4 @@
-package com.auss.musicplayer;
+package simple.music.player;
 
 import java.io.*;
 import java.nio.charset.Charset;

@@ -2,6 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p build/tests
+find build/tests -type f -delete
 javac -encoding UTF-8 -d build/tests tests/stubs/android/net/Uri.java \
-  src/com/auss/musicplayer/{Song,Lyrics,PlaylistIO,Mp3Metadata}.java tests/com/auss/musicplayer/FeatureTests.java
-java -cp build/tests com.auss.musicplayer.FeatureTests
+  src/simple/music/player/{Song,Lyrics,PlaylistIO,Mp3Metadata}.java tests/simple/music/player/FeatureTests.java
+java -cp build/tests simple.music.player.FeatureTests

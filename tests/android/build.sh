@@ -6,6 +6,7 @@ bt="$sdk/build-tools/35.0.0"
 jar="$sdk/platforms/android-35/android.jar"
 out="$PWD/build/instrumentation"
 mkdir -p "$out/classes" "$out/dex"
+find "$out/classes" "$out/dex" -type f -delete
 "$bt/aapt2" link --manifest tests/android/AndroidManifest.xml -I "$jar" -A build/fixtures -o "$out/unsigned.apk" --min-sdk-version 24 --target-sdk-version 35
 javac -source 8 -target 8 -bootclasspath "$jar:$bt/core-lambda-stubs.jar" -cp build/classes.jar -encoding UTF-8 -d "$out/classes" tests/android/PlayerIntegrationTests.java
 jar cf "$out/tests.jar" -C "$out/classes" .

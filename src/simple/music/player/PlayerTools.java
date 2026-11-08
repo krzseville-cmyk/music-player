@@ -1,4 +1,4 @@
-package com.auss.musicplayer;
+package simple.music.player;
 
 import android.app.Activity;
 import android.app.AlertDialog;

@@ -1,4 +1,4 @@
-package com.auss.musicplayer;
+package simple.music.player;
 
 import android.app.AlertDialog;
 import android.content.Intent;
@@ -186,7 +186,7 @@ final class SettingsScreen extends FrameLayout {
         action(library,R.drawable.ic_edit,"Edit MP3 tags","Title, artist, album and cover",null,tools::chooseMp3);
         LinearLayout about=group("ABOUT");
         action(about,R.drawable.ic_info,"App permissions","Manage audio and notifications",null,()->host.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:"+host.getPackageName()))));
-        LinearLayout app=row(about,R.drawable.ic_music,"Music Player","Offline music, on your device");
+        LinearLayout app=row(about,R.drawable.ic_music,"Simple Player","Offline music, on your device");
         String version="";try{version=host.getPackageManager().getPackageInfo(host.getPackageName(),0).versionName;}catch(Exception ignored){}
         app.addView(text("Version "+version,12,host.mutedColor(),false));
     }

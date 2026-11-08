@@ -13,7 +13,7 @@ New-Item -ItemType Directory -Force "$out\gen", "$out\classes", "$out\dex" | Out
 Get-ChildItem "$out\gen", "$out\classes", "$out\dex" -Recurse -File | Remove-Item
 Run "$bt\aapt2.exe" @("compile", "--dir", "res", "-o", "$out\res.zip")
 Run "$bt\aapt2.exe" @("link", "-o", "$out\unsigned.apk", "-I", $jar, "--manifest", "AndroidManifest.xml", "--java", "$out\gen",
-    "--min-sdk-version", "24", "--target-sdk-version", "35", "--version-code", "6", "--version-name", "3.3", "$out\res.zip")
+    "--min-sdk-version", "24", "--target-sdk-version", "35", "--version-code", "7", "--version-name", "3.4", "$out\res.zip")
 $sources = Get-ChildItem "src", "$out\gen" -Recurse -Filter *.java | ForEach-Object { $_.FullName }
 Run "javac" (@("-source", "8", "-target", "8", "-bootclasspath", "$jar;$bt\core-lambda-stubs.jar", "-encoding", "UTF-8", "-Xlint:-options", "-d", "$out\classes") + $sources)
 Run "jar" @("cf", "$out\classes.jar", "-C", "$out\classes", ".")
@@ -29,9 +29,9 @@ if (!(Test-Path $key)) {
 }
 if ($env:MUSIC_SIGNING_KEY) {
     if (!$env:MUSIC_STORE_PASSWORD -or !$env:MUSIC_KEY_PASSWORD) { throw "Set MUSIC_STORE_PASSWORD and MUSIC_KEY_PASSWORD privately" }
-    Run "java" @("-jar", "$bt\lib\apksigner.jar", "sign", "--ks", $key, "--ks-pass", "env:MUSIC_STORE_PASSWORD", "--key-pass", "env:MUSIC_KEY_PASSWORD", "--out", "$out\MusicPlayer.apk", "$out\aligned.apk")
+    Run "java" @("-jar", "$bt\lib\apksigner.jar", "sign", "--ks", $key, "--ks-pass", "env:MUSIC_STORE_PASSWORD", "--key-pass", "env:MUSIC_KEY_PASSWORD", "--out", "$out\Simple Player.apk", "$out\aligned.apk")
 } else {
-    Run "java" @("-jar", "$bt\lib\apksigner.jar", "sign", "--ks", $key, "--ks-pass", "pass:android", "--key-pass", "pass:android", "--out", "$out\MusicPlayer.apk", "$out\aligned.apk")
+    Run "java" @("-jar", "$bt\lib\apksigner.jar", "sign", "--ks", $key, "--ks-pass", "pass:android", "--key-pass", "pass:android", "--out", "$out\Simple Player.apk", "$out\aligned.apk")
 }
-Run "java" @("-jar", "$bt\lib\apksigner.jar", "verify", "$out\MusicPlayer.apk")
-Write-Host "Built $out\MusicPlayer.apk"
+Run "java" @("-jar", "$bt\lib\apksigner.jar", "verify", "$out\Simple Player.apk")
+Write-Host "Built $out\Simple Player.apk"

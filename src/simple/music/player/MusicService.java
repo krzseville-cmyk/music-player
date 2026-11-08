@@ -1,4 +1,4 @@
-package com.auss.musicplayer;
+package simple.music.player;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -44,11 +44,11 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
         MediaPlayer.OnCompletionListener, MediaPlayer.OnErrorListener,
         AudioManager.OnAudioFocusChangeListener {
 
-    public static final String ACTION_TOGGLE = "com.auss.musicplayer.TOGGLE";
-    public static final String ACTION_NEXT = "com.auss.musicplayer.NEXT";
-    public static final String ACTION_PREV = "com.auss.musicplayer.PREV";
-    public static final String ACTION_STOP = "com.auss.musicplayer.STOP";
-    public static final String EXTRA_OPEN_PLAYER = "com.auss.musicplayer.OPEN_PLAYER";
+    public static final String ACTION_TOGGLE = "simple.music.player.TOGGLE";
+    public static final String ACTION_NEXT = "simple.music.player.NEXT";
+    public static final String ACTION_PREV = "simple.music.player.PREV";
+    public static final String ACTION_STOP = "simple.music.player.STOP";
+    public static final String EXTRA_OPEN_PLAYER = "simple.music.player.OPEN_PLAYER";
 
     public static final int REPEAT_OFF = 0;
     public static final int REPEAT_ALL = 1;
@@ -186,7 +186,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
             notificationManager.createNotificationChannel(channel);
         }
 
-        session = new MediaSession(this, "MusicPlayer");
+        session = new MediaSession(this, "SimplePlayer");
         session.setCallback(new MediaSession.Callback() {
             @Override public void onPlay() { play(); }
             @Override public void onPlayFromMediaId(String id, android.os.Bundle extras) {

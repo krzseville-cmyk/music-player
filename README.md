@@ -1,8 +1,15 @@
-# Music Player
+# Simple Player
 
 A native, offline Android music player. Android 7.0 (API 24) or newer; no account or network permission required.
 
-[Download version 3.3](dist/MusicPlayer-v3.3.apk) · [Theme previews](docs/THEMES.md) · [Appearance](docs/screenshots/theme-ember-appearance-v3.3.png)
+[Download Simple Player](<dist/Simple Player.apk>) · [Theme previews](docs/THEMES.md)
+
+## Version 3.4 · Simple Player
+
+- App / launcher / widget / About name: **Simple Player**.
+- Android package and Java namespace: **`simple.music.player`**. Playback action names, resources, services, and test targets use the new namespace.
+- APK filename: **`Simple Player.apk`**, version **3.4**, code **7**.
+- Changing the Android package creates a separate installation from `com.auss.musicplayer`; that app's playlists, favorites, history, and settings are not transferred automatically. Existing shared music files remain available after granting audio access.
 
 ## Version 3.3 theme consistency
 
@@ -62,7 +69,7 @@ Windows PowerShell:
 .\build.ps1
 ```
 
-Output: `build/MusicPlayer.apk`. The default build uses a generated, local debug key. To update an existing installation while preserving its app data, sign with that installation's original key:
+Output: `build/Simple Player.apk`. The default build uses a generated, local debug key. To update an existing Simple Player installation (`simple.music.player`) while preserving its app data, sign with that installation's original key:
 
 ```sh
 export MUSIC_SIGNING_KEY=/private/path/musicplayer.keystore

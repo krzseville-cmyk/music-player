@@ -1,4 +1,4 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.auss.musicplayer.tests">
-    <application android:label="Music Player Tests" />
-    <instrumentation android:name="com.auss.musicplayer.PlayerIntegrationTests" android:targetPackage="com.auss.musicplayer" android:functionalTest="true" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="simple.music.player.tests">
+    <application android:label="Simple Player Tests" />
+    <instrumentation android:name="simple.music.player.PlayerIntegrationTests" android:targetPackage="simple.music.player" android:functionalTest="true" />
 </manifest>

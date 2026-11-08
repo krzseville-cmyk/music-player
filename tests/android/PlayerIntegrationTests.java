@@ -1,4 +1,4 @@
-package com.auss.musicplayer;
+package simple.music.player;
 
 import android.app.Instrumentation;
 import android.content.*;
@@ -41,7 +41,9 @@ public final class PlayerIntegrationTests extends Instrumentation {
             MainActivity activity = (MainActivity)startActivitySync(new Intent(getTargetContext(),MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             getTargetContext().bindService(new Intent(getTargetContext(),MusicService.class),connection,Context.BIND_AUTO_CREATE);
             waitFor(()->player!=null,"service binds");
-            if (arguments!=null && "themes".equals(arguments.getString("phase"))) {
+            if (arguments!=null && "identity".equals(arguments.getString("phase"))) {
+                identity(activity);
+            } else if (arguments!=null && "themes".equals(arguments.getString("phase"))) {
                 themePreview(activity);
             } else if (arguments!=null && "settings".equals(arguments.getString("phase"))) {
                 settingsPreview(activity);
@@ -119,6 +121,36 @@ public final class PlayerIntegrationTests extends Instrumentation {
     private Object field(MainActivity activity,String name) {
         try { java.lang.reflect.Field field=MainActivity.class.getDeclaredField(name);field.setAccessible(true);return field.get(activity); }
         catch(Exception e){throw new RuntimeException(e);}
+    }
+    private void identity(MainActivity activity) throws Exception {
+        check(()->getTargetContext().getPackageName().equals("simple.music.player"),"new application package");
+        check(()->getTargetContext().getApplicationInfo().loadLabel(getTargetContext().getPackageManager()).toString().equals("Simple Player"),"launcher label is Simple Player");
+        check(()->MainActivity.class.getName().equals("simple.music.player.MainActivity"),"launcher class moved");
+        check(()->R.class.getPackage().getName().equals("simple.music.player"),"resource namespace moved");
+        android.content.pm.PackageManager manager=getTargetContext().getPackageManager();
+        check(()->{
+            try{return manager.getActivityInfo(new ComponentName(getTargetContext(),MainActivity.class),0).exported;}catch(Exception e){return false;}
+        },"launcher component resolves");
+        check(()->{
+            try{return manager.getServiceInfo(new ComponentName(getTargetContext(),MusicService.class),0)!=null;}catch(Exception e){return false;}
+        },"playback service resolves");
+        check(()->{
+            try{return manager.getServiceInfo(new ComponentName(getTargetContext(),CarBrowserService.class),0)!=null;}catch(Exception e){return false;}
+        },"media browser service resolves");
+        check(()->{
+            try{return manager.getReceiverInfo(new ComponentName(getTargetContext(),PlayerWidget.class),0).loadLabel(manager).toString().equals("Simple Player");}catch(Exception e){return false;}
+        },"widget resolves with new label");
+        check(()->MusicService.ACTION_TOGGLE.equals("simple.music.player.TOGGLE")&&MusicService.ACTION_NEXT.equals("simple.music.player.NEXT")&&MusicService.EXTRA_OPEN_PLAYER.equals("simple.music.player.OPEN_PLAYER"),"playback action namespace moved");
+        runOnMainSync(activity::showSettings);
+        check(()->{
+            java.util.ArrayList<View> matches=new java.util.ArrayList<>();
+            ((View)field(activity,"settingsScreen")).findViewsWithText(matches,"Simple Player",View.FIND_VIEWS_WITH_TEXT);return !matches.isEmpty();
+        },"settings branding is Simple Player");
+        runOnMainSync(activity::closeSettings);
+        List<Song> fixtures=privateFixtures();
+        runOnMainSync(()->player.playQueue(fixtures,0));waitFor(()->player.isPlaying(),"renamed package plays audio");
+        runOnMainSync(player::pause);check(()->!player.isPlaying(),"renamed package pauses audio");
+        browser();
     }
     private void themePreview(MainActivity initial) throws Exception {
         MainActivity current=initial;

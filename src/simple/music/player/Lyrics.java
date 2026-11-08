@@ -1,4 +1,4 @@
-package com.auss.musicplayer;
+package simple.music.player;
 
 import java.util.ArrayList;
 import java.util.Collections;
