@@ -46,7 +46,9 @@ public final class PlayerIntegrationTests extends Instrumentation {
             MainActivity activity = (MainActivity)startActivitySync(new Intent(getTargetContext(),MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             getTargetContext().bindService(new Intent(getTargetContext(),MusicService.class),connection,Context.BIND_AUTO_CREATE);
             waitFor(()->player!=null,"service binds");
-            if(arguments!=null&&"effects".equals(arguments.getString("phase"))){
+            if(arguments!=null&&"formats".equals(arguments.getString("phase"))){
+                decoderFormats();
+            } else if(arguments!=null&&"effects".equals(arguments.getString("phase"))){
                 audioEffects(activity);
             } else if (arguments!=null && "lyrics".equals(arguments.getString("phase"))) {
                 lyricsPreview(activity);
@@ -137,9 +139,7 @@ public final class PlayerIntegrationTests extends Instrumentation {
         try{java.lang.reflect.Field field=MusicService.class.getDeclaredField(name);field.setAccessible(true);return field.get(player);}
         catch(Exception error){throw new AssertionError(error);}
     }
-    private android.media.audiofx.Equalizer eq(){return (android.media.audiofx.Equalizer)serviceField("equalizer");}
-    private android.media.audiofx.BassBoost bassEffect(){return (android.media.audiofx.BassBoost)serviceField("bass");}
-    private android.media.MediaPlayer media(){return (android.media.MediaPlayer)serviceField("player");}
+    private PcmPlayer media(){return (PcmPlayer)serviceField("player");}
     private Song gainFixture(Song source,String name,String gain)throws Exception{
         ByteArrayOutputStream audio=new ByteArrayOutputStream();
         try(InputStream in=getTargetContext().getContentResolver().openInputStream(source.uri)){Mp3Metadata.copy(in,audio);}
@@ -153,53 +153,57 @@ public final class PlayerIntegrationTests extends Instrumentation {
         }
         return new Song(-301,name,"Studio Sessions","Effect tests",-301,18000,1,Uri.fromFile(file));
     }
+    private void decoderFormats()throws Exception{
+        runOnMainSync(player::pause);
+        for(String suffix:new String[]{"wav","m4a","flac","ogg","opus","24.wav","surround.m4a"}){
+            String name="dsp-fixture."+suffix;File file=new File(getTargetContext().getFilesDir(),name);
+            try(InputStream in=getContext().getAssets().open(name);OutputStream out=new FileOutputStream(file)){Mp3Metadata.copy(in,out);}
+            PcmPlayer decoder=new PcmPlayer();java.util.concurrent.atomic.AtomicBoolean ready=new java.util.concurrent.atomic.AtomicBoolean(),done=new java.util.concurrent.atomic.AtomicBoolean();AtomicReference<String> error=new AtomicReference<>();
+            runOnMainSync(()->{decoder.setEffects(4,700);decoder.setOnPreparedListener(mp->ready.set(true));decoder.setOnCompletionListener(mp->done.set(true));decoder.setOnErrorListener((mp,w,e)->{error.set("decoder error");return true;});decoder.setDataSource(getTargetContext(),Uri.fromFile(file));decoder.prepareAsync();});
+            try{
+                waitFor(()->ready.get()||error.get()!=null,suffix+" prepares");check(()->error.get()==null&&decoder.getDuration()>2500,suffix+" duration is available");
+                runOnMainSync(decoder::start);waitFor(()->decoder.getCurrentPosition()>250||error.get()!=null,suffix+" PCM head advances");check(()->error.get()==null,suffix+" decoded with software effects");
+                runOnMainSync(()->{decoder.pause();decoder.seekTo(2000);});waitFor(()->Math.abs(decoder.getCurrentPosition()-2000)<100,suffix+" paused seek");
+                check(()->!decoder.isPlaying(),suffix+" remains paused after seek");runOnMainSync(decoder::start);
+                waitFor(()->done.get()||error.get()!=null,suffix+" completion");check(()->error.get()==null&&done.get(),suffix+" drains and completes");
+            }finally{runOnMainSync(decoder::release);}
+        }
+    }
     private void audioEffects(MainActivity activity)throws Exception{
-        check(()->getTargetContext().checkSelfPermission(android.Manifest.permission.MODIFY_AUDIO_SETTINGS)==android.content.pm.PackageManager.PERMISSION_GRANTED,"audio settings permission granted");
         List<Song> songs=new ArrayList<>(privateFixtures().subList(0,2));
+        check(()->player.equalizerPresets().length==8&&player.adjustableBass(),"software controls are available without an audio route effect service");
+        check(()->player.equalizerPreset(1)&&player.setBass(600),"effects can be selected before decoding");
         runOnMainSync(()->{player.setCrossfade(0);player.setGapless(false);player.setSpeed(1);player.setNormalization(false);player.playQueue(songs,0);});
-        waitFor(()->player.isPlaying()&&player.equalizerPresets().length>0,"equalizer attaches to prepared playback");
-        check(()->(Integer)serviceField("effectsSession")==media().getAudioSessionId()&&media().getAudioSessionId()>0,"effects target the active audio session");
-        check(()->player.equalizerPreset(1),"preset application succeeds");
-        check(()->eq()!=null&&eq().hasControl()&&eq().getEnabled()&&eq().getCurrentPreset()==1,"native equalizer confirms enabled preset");
-        check(()->player.adjustableBass()&&player.setBass(600),"adjustable bass application succeeds");
-        check(()->bassEffect().getEnabled()&&Math.abs(bassEffect().getRoundedStrength()-600)<=100,"native bass confirms nonzero strength");
-        runOnMainSync(player::pause);check(()->player.equalizerPreset(2)&&player.setBass(800)&&!player.isPlaying(),"effects update without resuming paused playback");
-        check(()->eq().getCurrentPreset()==2&&bassEffect().getEnabled(),"changing bass preserves the equalizer");
-        check(()->player.setBass(2000)&&bassEffect().getRoundedStrength()<=1000,"bass upper bound is clamped");
-        check(()->player.setBass(-50)&&!bassEffect().getEnabled(),"negative bass disables safely");
-        check(()->!player.equalizerPreset(999)&&eq().getCurrentPreset()==2,"invalid preset does not replace active settings");
-        runOnMainSync(()->{player.setBass(600);player.next();});
-        waitFor(()->player.isPlaying()&&player.getIndex()==1,"manual track change plays");
-        check(()->eq().getEnabled()&&eq().getCurrentPreset()==2&&bassEffect().getEnabled(),"effects survive player reset and next track");
-        runOnMainSync(()->{player.setGapless(true);player.playQueue(songs,0);});
-        waitFor(()->player.isPlaying()&&(Boolean)serviceField("upcomingReady"),"gapless candidate prepares");
-        check(()->((android.media.MediaPlayer)serviceField("upcoming")).getAudioSessionId()==media().getAudioSessionId(),"gapless candidate shares effects session");
-        android.media.audiofx.Equalizer shared=eq();
-        runOnMainSync(()->player.seekTo(player.getDuration()-1200));waitFor(()->player.getIndex()==1&&player.isPlaying(),"gapless transition plays");
-        check(()->eq()==shared&&eq().getEnabled()&&bassEffect().getEnabled(),"gapless promotion retains active effect chain");
-        runOnMainSync(()->{player.setCrossfade(3);player.playQueue(songs,0);});
-        waitFor(()->player.isPlaying()&&(Boolean)serviceField("upcomingReady"),"crossfade candidate prepares");
-        check(()->((android.media.MediaPlayer)serviceField("upcoming")).getAudioSessionId()==media().getAudioSessionId(),"crossfade candidate shares effects session");
-        runOnMainSync(()->player.seekTo(player.getDuration()-4000));
-        waitFor(()->(Boolean)serviceField("fading"),"crossfade starts");
-        check(()->eq().getEnabled()&&bassEffect().getEnabled(),"effects remain enabled during crossfade");
-        waitFor(()->player.getIndex()==1,"crossfade promotion completes");
-        check(()->eq().getEnabled()&&eq().getCurrentPreset()==2&&bassEffect().getEnabled(),"crossfade preserves effect settings");
+        waitFor(()->player.isPlaying()&&media().getAudioSessionId()>0,"software PCM playback starts");
+        check(()->media().effectPreset()==1&&media().bassStrength()==600,"saved effects reach the PCM renderer");
+        int before=player.getPosition();Thread.sleep(400);check(()->player.getPosition()>before,"PCM output head advances playback position");
+        runOnMainSync(player::pause);int paused=player.getPosition();Thread.sleep(300);check(()->Math.abs(player.getPosition()-paused)<100,"paused PCM output stays paused");
+        check(()->player.equalizerPreset(2)&&player.setBass(800)&&!player.isPlaying(),"live effects do not resume paused audio");
+        check(()->media().effectPreset()==2&&media().bassStrength()==800,"live effect settings reach renderer");
+        check(()->player.setBass(2000)&&media().bassStrength()==1000,"bass upper bound is clamped");
+        check(()->player.setBass(-50)&&media().bassStrength()==0,"negative bass disables safely");
+        check(()->!player.equalizerPreset(999)&&media().effectPreset()==2,"invalid preset preserves active settings");
+        runOnMainSync(()->player.seekTo(7000));waitFor(()->Math.abs(player.getPosition()-7000)<300,"paused seek reaches target");check(()->!player.isPlaying(),"seek preserves pause");
+        runOnMainSync(()->{player.setBass(600);player.next();});waitFor(()->player.isPlaying()&&player.getIndex()==1,"manual next plays");
+        check(()->media().effectPreset()==2&&media().bassStrength()==600,"effects survive decoder reset");
+        runOnMainSync(()->{player.setGapless(true);player.playQueue(songs,0);});waitFor(()->player.isPlaying()&&(Boolean)serviceField("upcomingReady"),"preloaded PCM candidate prepares");
+        check(()->((PcmPlayer)serviceField("upcoming")).effectPreset()==2&&((PcmPlayer)serviceField("upcoming")).bassStrength()==600,"incoming track is processed before output");
+        runOnMainSync(()->player.seekTo(player.getDuration()-1200));waitFor(()->player.getIndex()==1&&player.isPlaying(),"preloaded transition keeps playback active");
+        check(()->media().effectPreset()==2&&media().bassStrength()==600,"preloaded promotion retains software effects");
+        runOnMainSync(()->{player.setCrossfade(3);player.playQueue(songs,0);});waitFor(()->player.isPlaying()&&(Boolean)serviceField("upcomingReady"),"crossfade PCM candidate prepares");
+        runOnMainSync(()->player.seekTo(player.getDuration()-4000));waitFor(()->(Boolean)serviceField("fading"),"PCM crossfade starts");
+        check(()->media().effectPreset()==2&&((PcmPlayer)serviceField("upcoming")).effectPreset()==2,"both crossfade streams use software processing");
+        waitFor(()->player.getIndex()==1,"PCM crossfade promotes incoming track");
         Song negative=gainFixture(songs.get(0),"Negative gain","-6"),positive=gainFixture(songs.get(1),"Positive gain","3");
         runOnMainSync(()->{player.setCrossfade(0);player.setGapless(false);player.setNormalization(true);player.playQueue(Arrays.asList(negative,positive),0);});
-        waitFor(()->player.isPlaying()&&Math.abs((Float)serviceField("trackVolume")-.501f)<.02f,"negative ReplayGain attenuates player volume");
-        runOnMainSync(()->player.playAt(1));
-        waitFor(()->player.isPlaying()&&serviceField("loudness")!=null&&((android.media.audiofx.LoudnessEnhancer)serviceField("loudness")).getEnabled(),"positive ReplayGain enables loudness effect");
-        check(()->((android.media.audiofx.LoudnessEnhancer)serviceField("loudness")).getTargetGain()==300,"positive ReplayGain uses millibel target");
-        runOnMainSync(()->player.setNormalization(false));
-        waitFor(()->!((android.media.audiofx.LoudnessEnhancer)serviceField("loudness")).getEnabled()&&(Float)serviceField("trackVolume")==1f,"disabling ReplayGain restores volume");
-        runOnMainSync(()->{player.pause();player.equalizerPreset(-1);player.setBass(0);});
-        check(()->!eq().getEnabled()&&!bassEffect().getEnabled()&&!player.isPlaying(),"off disables native effects without starting audio");
+        waitFor(()->player.isPlaying()&&Math.abs((Float)serviceField("trackVolume")-.501f)<.02f,"negative ReplayGain attenuates PCM output volume");
+        runOnMainSync(()->player.playAt(1));waitFor(()->player.isPlaying()&&media().gainDb()==3,"positive ReplayGain reaches software processor");
+        runOnMainSync(()->player.setNormalization(false));waitFor(()->media().gainDb()==0&&(Float)serviceField("trackVolume")==1f,"ReplayGain off resets software gain");
+        runOnMainSync(()->{player.pause();player.equalizerPreset(-1);player.setBass(0);});check(()->media().effectPreset()==-1&&media().bassStrength()==0&&!player.isPlaying(),"off bypasses effects without starting audio");
         runOnMainSync(()->{player.equalizerPreset(2);player.setBass(600);activity.showSoundSettings();});
-        check(()->hasText((View)field(activity,"settingsScreen"),player.equalizerStatus()),"settings show actual equalizer state");
-        capture("preview-audio-effects.png");
-        runOnMainSync(()->{activity.closeSettings();activity.showCover();invoke(activity,"showNowPlaying");});capture("preview-player-icons.png");
-        runOnMainSync(()->{player.equalizerPreset(-1);player.setBass(0);player.setGapless(true);});
+        check(()->hasText((View)field(activity,"settingsScreen"),"Treble boost"),"settings show software preset");
+        capture("preview-software-effects.png");
+        runOnMainSync(()->{activity.closeSettings();player.equalizerPreset(-1);player.setBass(0);player.setGapless(true);});
     }
     private void lyricsPreview(MainActivity activity) throws Exception {
         List<Song> songs=privateFixtures();Song a=songs.get(0),b=songs.get(1);

@@ -10,7 +10,7 @@ public final class FeatureTests {
     static int checks;
     static void check(boolean value,String message) { checks++; if (!value) throw new AssertionError(message); }
     public static void main(String[] args) throws Exception {
-        lyrics(); lyricEncoding(); playlists(); mp3();
+        lyrics(); lyricEncoding(); playlists(); mp3(); softwareEffects();
         System.out.println("Passed " + checks + " feature checks");
     }
     static void lyrics() {
@@ -86,6 +86,29 @@ public final class FeatureTests {
         try{Mp3Metadata.rewrite(source,destination,"X","Y","Z",null);}catch(IOException e){rejected=true;}
         check(rejected,"non-MP3 files rejected");
         for(File file:folder.listFiles())file.delete();folder.delete();
+    }
+    static double response(int preset,int bass,int hz,int rate,float gain) {
+        SoftwareEffects effects=new SoftwareEffects(rate,1);effects.configure(new SoftwareEffects.Config(preset,bass,gain));
+        short[] signal=new short[rate*2];for(int i=0;i<signal.length;i++)signal[i]=(short)(3000*Math.sin(2*Math.PI*hz*i/rate));
+        effects.process(signal,signal.length);double sum=0;for(int i=rate;i<signal.length;i++)sum+=(double)signal[i]*signal[i];return Math.sqrt(sum/rate);
+    }
+    static void softwareEffects() {
+        SoftwareEffects dsp=new SoftwareEffects(48000,2);dsp.configure(new SoftwareEffects.Config(-1,0,0));
+        short[] original={-32768,32767,-20000,12345,0,1},copy=original.clone();dsp.process(copy,copy.length);check(Arrays.equals(original,copy),"disabled effects preserve PCM exactly");
+        dsp.configure(new SoftwareEffects.Config(0,0,0));copy=original.clone();dsp.process(copy,copy.length);check(Arrays.equals(original,copy),"flat preset preserves PCM exactly");
+        for(int rate:new int[]{44100,48000,96000}){
+            double low=response(-1,1000,60,rate,0),mid=response(-1,1000,1000,rate,0);
+            check(low/mid>2.5,"software bass raises low frequencies at "+rate);
+            double high=response(2,0,12000,rate,0),lowEq=response(2,0,250,rate,0);
+            check(high/lowEq>1.5,"software treble preset changes frequency response at "+rate);
+            check(response(-1,0,1000,rate,6)/response(-1,0,1000,rate,0)>1.9,"software ReplayGain boosts PCM at "+rate);
+        }
+        dsp=new SoftwareEffects(48000,2);dsp.configure(new SoftwareEffects.Config(4,700,0));short[] stereo=new short[96000];
+        for(int i=0;i<stereo.length;i+=2)stereo[i]=(short)(8000*Math.sin(2*Math.PI*110*i/96000));dsp.process(stereo,stereo.length);
+        boolean isolated=true;for(int i=1;i<stereo.length;i+=2)if(stereo[i]!=0)isolated=false;check(isolated,"stereo filter histories are isolated");
+        dsp.reset();short[] silence=new short[9600];dsp.process(silence,silence.length);check(Arrays.equals(silence,new short[silence.length]),"seek reset removes filter history");
+        SoftwareEffects.Config bounded=new SoftwareEffects.Config(900,9000,Float.NaN);check(bounded.preset==-1&&bounded.bass==1000&&bounded.gainDb==0,"DSP configuration is bounded");
+        for(int preset=0;preset<SoftwareEffects.PRESETS.length;preset++)check(response(preset,1000,250,48000,12)>20,"preset remains stable with maximum bass and gain: "+preset);
     }
     static byte[] concat(byte[] a,byte[] b) { byte[] v=Arrays.copyOf(a,a.length+b.length);System.arraycopy(b,0,v,a.length,b.length);return v; }
     static void frame(OutputStream output,String id,byte[] data,boolean sync) throws IOException {

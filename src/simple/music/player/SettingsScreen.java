@@ -203,7 +203,7 @@ final class SettingsScreen extends FrameLayout {
         action(effects,R.drawable.ic_equalizer,"Equalizer","Choose a sound preset",()->player()==null?"Play a song first":player().equalizerStatus(),this::equalizer);
         action(effects,R.drawable.ic_bass,"Bass boost","Adjust low-frequency strength",()->player()==null?"Play a song first":player().bassStatus(),this::bass);
         toggle(effects,R.drawable.ic_volume,"ReplayGain",()->"Balance volume using embedded track-gain tags.",()->player()!=null&&player().normalization(),()->player()!=null,value->player().setNormalization(value));
-        TextView note=text("Audio effects depend on your device. Tracks without ReplayGain tags keep their original volume.",12,host.mutedColor(),false);
+        TextView note=text("Software equalizer and bass apply to Simple Player on speakers, headphones, Bluetooth and USB. Tracks without ReplayGain tags keep their original volume.",12,host.mutedColor(),false);
         note.setPadding(dp(4),dp(16),dp(4),0);sections.addView(note);
     }
     private AlertDialog.Builder dialog(String title){return ThemeDialogs.builder(host).setTitle(title).setOnDismissListener(d->refresh());}

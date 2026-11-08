@@ -1,3 +1,17 @@
+# Version 4.1 · Route-independent software effects
+
+- Replaced the native effect dependency with MediaExtractor / MediaCodec decoding, per-stream software PCM filters, and AudioTrack output. Equalizer / bass processing occurs before Android output routing; native Equalizer, BassBoost, and LoudnessEnhancer are no longer required. This processes Simple Player audio, not other apps.
+- Eight presets use five peaking filters plus an adjustable low shelf; filter state is isolated per channel / stream. Boosts reserve headroom, gain changes ramp, and a final limiter bounds peaks. Disabled effects and Flat at zero bass / gain preserve input PCM exactly.
+- **56 host checks passed**, including frequency-response measurements at 44.1 / 48 / 96 kHz, positive gain, stereo isolation, bypass, seek-state reset, parameter bounds, all presets with maximum bass / gain, and the existing file/parser checks.
+- **57 Android decoder checks passed** on API 35 for stereo WAV, AAC/M4A, FLAC, Vorbis/Ogg, Opus, 24-bit WAV, and multichannel AAC. Each format prepared, exposed duration, advanced its PCM playback head, sought while paused, resumed, drained, and completed with software processing enabled.
+- **29 Android software-effects checks passed**: availability before decoding, saved / live settings, pause preservation, bounds, manual next, preloaded transitions, both crossfade streams, ReplayGain, bypass, and settings status.
+- **22 existing Android playback checks passed**, including seek, pause, speed, queue operations, favorites / history, sleep-at-end, crossfade / gapless promotion, and media-browser categories. Transition tests verify active playback / position, not sample-accurate gapless alignment.
+- Resource / Java / DEX compilation, alignment, instrumentation compilation, and release signature verification passed. A final compatibility-only Buffer cast was compiled and checked in bytecode to call legacy `java.nio.Buffer.position/limit`; its behavior is unchanged. API 24 was not run.
+- Output uses 16-bit PCM. Sources with more than two channels are downmixed to stereo. Compressed-audio offload is bypassed. Hardware Bluetooth / USB route changes, manufacturer devices, battery use, physical output quality, and sample-accurate gapless boundaries remain unmeasured. Software processing removes the native effect-service dependency; it does not guarantee Android codec support or connectivity for every possible device.
+- Native preset indexes reset to Off once because the new software collection differs. Bass strength persists. App identity is **Simple Player**, `simple.music.player`, version **4.1**, code **14**, minimum API **24**, target API **35**.
+- Certificate remains `3fb413c86beccc6627a4c3be5de0a8cb4bfc15715d03ebbf2d02ab85ff037c73`.
+- APK SHA-256: `baeda5f099b385c21da615d39cc501456dd7e5f68c81f2df7071179351cd7bec`.
+
 # Version 4.0 · Audio effects repair
 
 - Added the normal Android `MODIFY_AUDIO_SETTINGS` permission. Effects now attach after the player is prepared, track its actual nonzero audio session, and reuse that chain when settings change. Preloaded gapless / crossfade players share the active session; promotion retains the chain.

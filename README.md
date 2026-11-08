@@ -4,6 +4,14 @@ A native local-music player for Android 7.0 (API 24) or newer. Playback and save
 
 [Download Simple Player](<dist/Simple Player.apk>) · [Lyrics preview](docs/screenshots/now-playing-lyrics-v3.6.png) · [Theme previews](docs/THEMES.md)
 
+## Version 4.1 · Software effects for every app output route
+
+- Equalizer and bass no longer use the phone's native effect services. Audio is decoded through Android MediaCodec, processed in the app, and sent as PCM through AudioTrack, so the same processing is used before Android routes music to speakers, wired headphones, Bluetooth, or USB.
+- Eight software presets and adjustable bass are available even before playing a song. Both streams receive processing during crossfade; independent filter history preserves stereo separation. Boosts reserve headroom and a final limiter bounds hot samples.
+- This applies to **Simple Player's audio**, not other apps. Decoder availability and output-device connectivity still depend on Android. No root or microphone permission is needed.
+- Output is 16-bit PCM; sources with more than two channels are downmixed to stereo. Hardware compressed-audio offload is bypassed to allow software processing. Preloaded transitions are tested for continuous playback, but sample-accurate gapless boundaries have not been measured.
+- Native device preset indexes reset to Off once because the software preset collection differs. Bass strength is retained. Version **4.1**, code **14**; package and signing identity unchanged.
+
 ## Version 4.0 · Audio effects repair
 
 - Added Android's normal `MODIFY_AUDIO_SETTINGS` permission and attach effects after playback has a prepared audio session.
@@ -123,6 +131,8 @@ Keep signing keys outside the repository. The historical ZIP on `main` is retain
 
 ## Verification
 
-`tests/run.sh` exercises LRC timing, playlist ordering and path matching, ID3v2.3 / v2.4 preservation, ReplayGain parsing, artwork updates, and rejection of unsafe edits. Tests compare the audio bytes before and after MP3 tag changes. The URI stand-in under `tests/stubs/` is used only by host tests and is excluded from the APK build.
+`tests/run.sh` also measures software-filter frequency response, stereo isolation, bypass, and gain behavior. It exercises LRC timing, playlist ordering and path matching, ID3v2.3 / v2.4 preservation, ReplayGain parsing, artwork updates, and rejection of unsafe edits. Tests compare the audio bytes before and after MP3 tag changes. The URI stand-in under `tests/stubs/` is used only by host tests and is excluded from the APK build.
 
-Device checks and screenshots are recorded in [VALIDATION.md](VALIDATION.md). Android Auto, hardware equalizer effects, Bluetooth routing, and physical-device audio quality require corresponding hardware / host testing.
+Device checks and screenshots are recorded in [VALIDATION.md](VALIDATION.md). Android Auto, physical Bluetooth / USB route changes, and physical-device audio quality require corresponding hardware / host testing. Equalizer and bass are now software filters.
+
+Software decoder tests: generate the existing synthetic MP3 assets with `python3 tests/make-fixtures.py` and the additional formats with `python3 tests/make-audio-fixtures.py` (ffmpeg required). Build instrumentation with `bash tests/android/build.sh`; run its `effects`, `formats`, and default phases on an Android emulator. Test assets stay under `build/fixtures` and are excluded from production builds.
