@@ -200,12 +200,8 @@ final class SettingsScreen extends FrameLayout {
                 ()->player()!=null&&player().gapless()&&player().crossfadeSeconds()==0,()->player()!=null&&player().crossfadeSeconds()==0,value->player().setGapless(value));
         action(transitions,R.drawable.ic_crossfade,"Crossfade","Blend the end of one track into the next",()->{int seconds=player()==null?audio().getInt("crossfade",0):player().crossfadeSeconds();return seconds==0?"Off":seconds+" seconds";},this::crossfade);
         LinearLayout effects=group("AUDIO EFFECTS");
-        action(effects,R.drawable.ic_equalizer,"Equalizer","Choose a sound preset",()->{
-            if(!audio().getBoolean("eqEnabled",false))return "Off";
-            String[] presets=player()==null?new String[0]:player().equalizerPresets();int selected=audio().getInt("eqPreset",-1);
-            return selected>=0&&selected<presets.length?presets[selected]:"Enabled";
-        },this::equalizer);
-        action(effects,R.drawable.ic_bass,"Bass boost","Adjust low-frequency strength",()->{int strength=audio().getInt("bass",0)/10;return strength==0?"Off":strength+"%";},this::bass);
+        action(effects,R.drawable.ic_equalizer,"Equalizer","Choose a sound preset",()->player()==null?"Play a song first":player().equalizerStatus(),this::equalizer);
+        action(effects,R.drawable.ic_bass,"Bass boost","Adjust low-frequency strength",()->player()==null?"Play a song first":player().bassStatus(),this::bass);
         toggle(effects,R.drawable.ic_volume,"ReplayGain",()->"Balance volume using embedded track-gain tags.",()->player()!=null&&player().normalization(),()->player()!=null,value->player().setNormalization(value));
         TextView note=text("Audio effects depend on your device. Tracks without ReplayGain tags keep their original volume.",12,host.mutedColor(),false);
         note.setPadding(dp(4),dp(16),dp(4),0);sections.addView(note);
@@ -224,17 +220,19 @@ final class SettingsScreen extends FrameLayout {
     }
     private void equalizer(){
         if(!connected())return;String[] presets=player().equalizerPresets();
-        if(presets.length==0){Toast.makeText(host,"Play a song first. Equalizer support depends on your device.",Toast.LENGTH_LONG).show();return;}
+        if(presets.length==0){Toast.makeText(host,player().equalizerStatus(),Toast.LENGTH_LONG).show();return;}
         String[] labels=new String[presets.length+1];labels[0]="Off";System.arraycopy(presets,0,labels,1,presets.length);
         int selected=audio().getBoolean("eqEnabled",false)?audio().getInt("eqPreset",-1)+1:0;
-        dialog("Equalizer").setSingleChoiceItems(labels,selected,(d,i)->{player().equalizerPreset(i-1);d.dismiss();}).setNegativeButton("Cancel",null).show();
+        dialog("Equalizer").setSingleChoiceItems(labels,selected,(d,i)->{if(!player().equalizerPreset(i-1))Toast.makeText(host,player().equalizerStatus(),Toast.LENGTH_LONG).show();d.dismiss();}).setNegativeButton("Cancel",null).show();
     }
     private void bass(){
-        if(!connected())return;LinearLayout body=new LinearLayout(host);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(24),dp(12),dp(24),dp(8));
+        if(!connected())return;
+        if(!player().adjustableBass()){Toast.makeText(host,player().bassStatus().equals("Off")?"Adjustable bass boost is unavailable on this audio output.":player().bassStatus(),Toast.LENGTH_LONG).show();return;}
+        LinearLayout body=new LinearLayout(host);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(24),dp(12),dp(24),dp(8));
         TextView value=text("",18,host.accentColor(),true);body.addView(value);
         SeekBar slider=new SeekBar(host);slider.setMax(100);slider.setProgress(audio().getInt("bass",0)/10);value.setText(slider.getProgress()+"%");
         slider.setProgressTintList(ColorStateList.valueOf(host.accentColor()));slider.setThumbTintList(ColorStateList.valueOf(host.accentColor()));
         slider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar bar,int progress,boolean user){value.setText(progress+"%");}public void onStartTrackingTouch(SeekBar bar){}public void onStopTrackingTouch(SeekBar bar){}});
-        body.addView(slider);dialog("Bass boost").setView(body).setPositiveButton("Apply",(d,i)->player().setBass(slider.getProgress()*10)).setNegativeButton("Cancel",null).show();
+        body.addView(slider);dialog("Bass boost").setView(body).setPositiveButton("Apply",(d,i)->{if(!player().setBass(slider.getProgress()*10))Toast.makeText(host,player().bassStatus(),Toast.LENGTH_LONG).show();}).setNegativeButton("Cancel",null).show();
     }
 }

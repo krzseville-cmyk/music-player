@@ -26,6 +26,7 @@ import android.os.Looper;
 import android.os.SystemClock;
 import android.media.PlaybackParams;
 import android.media.audiofx.Equalizer;
+import android.media.audiofx.AudioEffect;
 import android.media.audiofx.BassBoost;
 import android.media.audiofx.LoudnessEnhancer;
 import java.io.InputStream;
@@ -107,6 +108,8 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
     private Equalizer equalizer;
     private BassBoost bass;
     private LoudnessEnhancer loudness;
+    private int effectsSession,gainGeneration;
+    private String equalizerError="Play a song first",bassError="Play a song first";
     private float trackVolume = 1f;
     private float duckVolume = 1f;
     private boolean fading;
@@ -541,7 +544,6 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
             player.setOnCompletionListener(this);
             player.setOnErrorListener(this);
             player.setOnSeekCompleteListener(seekPlayer -> { updateSession(); savePlaybackNow(); });
-            configureEffects();
         } else {
             player.reset();
         }
@@ -588,9 +590,12 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 
     @Override
     public void onPrepared(MediaPlayer mp) {
+        if(mp!=player)return;
         preparing = false;
         prepared = true;
         consecutiveErrors = 0;
+        configureEffects();
+        if(!playWhenReady)loadGain();
         if (restorePosition > 0) { player.seekTo(restorePosition); restorePosition = 0; }
         if (playWhenReady) startPlayback();
         else updateAll();
@@ -608,7 +613,6 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
         if (upcomingReady && upcoming != null) {
             boolean alreadyPlaying = fading || (crossfadeSeconds() == 0 && gapless());
             MediaPlayer old = player;
-            releaseEffects();
             player = upcoming;
             // A preloaded player becomes the normal player and may be reset for a later queue.
             player.setOnPreparedListener(this);
@@ -768,51 +772,104 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
         loadArt(); updateAll();
     }
     private void releaseEffects() {
-        if (equalizer != null) { equalizer.release(); equalizer = null; }
-        if (bass != null) { bass.release(); bass = null; }
-        if (loudness != null) { loudness.release(); loudness = null; }
+        if(equalizer!=null){try{equalizer.release();}catch(RuntimeException ignored){}equalizer=null;}
+        if(bass!=null){try{bass.release();}catch(RuntimeException ignored){}bass=null;}
+        if(loudness!=null){try{loudness.release();}catch(RuntimeException ignored){}loudness=null;}
+        effectsSession=0;
     }
     private void configureEffects() {
-        releaseEffects();
-        try { loudness = new LoudnessEnhancer(player.getAudioSessionId()); }
-        catch (RuntimeException ignored) { }
+        if(player==null||!prepared)return;
+        int session=player.getAudioSessionId();
+        if(session<=0)return;
+        if(effectsSession!=session){releaseEffects();effectsSession=session;}
+        if(loudness==null)try{loudness=new LoudnessEnhancer(session);}catch(RuntimeException ignored){}
+        equalizerError="";
         try {
-            equalizer = new Equalizer(0, player.getAudioSessionId());
-            int preset = prefs.getInt("eqPreset", -1);
-            if (preset >= 0 && preset < equalizer.getNumberOfPresets()) equalizer.usePreset((short) preset);
-            equalizer.setEnabled(prefs.getBoolean("eqEnabled", false));
-        } catch (RuntimeException ignored) { }
+            if(equalizer==null)equalizer=new Equalizer(0,session);
+            if(!equalizer.hasControl())throw new IllegalStateException("Effect controlled by another app");
+            int preset=prefs.getInt("eqPreset",-1);
+            boolean enabled=prefs.getBoolean("eqEnabled",false);
+            if(enabled){
+                if(preset<0||preset>=equalizer.getNumberOfPresets()){
+                    enabled=false;
+                    prefs.edit().putBoolean("eqEnabled",false).putInt("eqPreset",-1).apply();
+                }else equalizer.usePreset((short)preset);
+            }
+            if(equalizer.setEnabled(enabled)!=AudioEffect.SUCCESS||equalizer.getEnabled()!=enabled)throw new IllegalStateException("Effect could not be applied");
+        }catch(RuntimeException error){
+            android.util.Log.w("SimplePlayer","Cannot attach or apply equalizer",error);
+            equalizerError="Equalizer unavailable on this audio output";
+            if(equalizer!=null){try{equalizer.release();}catch(RuntimeException ignored){}equalizer=null;}
+        }
+        bassError="";
         try {
-            bass = new BassBoost(0, player.getAudioSessionId());
-            bass.setStrength((short) prefs.getInt("bass", 0));
-            bass.setEnabled(prefs.getInt("bass", 0) > 0);
-        } catch (RuntimeException ignored) { }
+            if(bass==null)bass=new BassBoost(0,session);
+            if(!bass.hasControl())throw new IllegalStateException("Effect controlled by another app");
+            int strength=Math.max(0,Math.min(1000,prefs.getInt("bass",0)));
+            if(bass.getStrengthSupported())bass.setStrength((short)strength);
+            else if(strength>0)throw new IllegalStateException("Adjustable bass is unsupported");
+            if(bass.setEnabled(strength>0)!=AudioEffect.SUCCESS||bass.getEnabled()!=(strength>0))throw new IllegalStateException("Effect could not be applied");
+        }catch(RuntimeException error){
+            android.util.Log.w("SimplePlayer","Cannot attach or apply bass boost",error);
+            bassError="Bass boost unavailable on this audio output";
+            if(bass!=null){try{bass.release();}catch(RuntimeException ignored){}bass=null;}
+        }
     }
     public String[] equalizerPresets() {
-        if (equalizer == null) return new String[0];
-        String[] result = new String[equalizer.getNumberOfPresets()];
-        for (short i = 0; i < result.length; i++) result[i] = equalizer.getPresetName(i);
-        return result;
+        try{
+            if(equalizer==null||!equalizer.hasControl())return new String[0];
+            String[] result=new String[equalizer.getNumberOfPresets()];
+            for(short i=0;i<result.length;i++)result[i]=equalizer.getPresetName(i);
+            return result;
+        }catch(RuntimeException error){return new String[0];}
     }
-    public void equalizerPreset(int preset) {
-        prefs.edit().putBoolean("eqEnabled", preset >= 0).putInt("eqPreset", preset).apply();
-        configureEffects();
-        loadGain();
+    public String equalizerStatus() {
+        if(!prepared)return "Play a song first";
+        if(!equalizerError.isEmpty())return equalizerError;
+        try{
+            if(equalizer==null||!equalizer.hasControl())return "Equalizer unavailable on this audio output";
+            if(!equalizer.getEnabled())return "Off";
+            return equalizer.getPresetName(equalizer.getCurrentPreset());
+        }catch(RuntimeException error){return "Equalizer unavailable on this audio output";}
     }
-    public void setBass(int value) { prefs.edit().putInt("bass", value).apply(); configureEffects(); loadGain(); }
+    public String bassStatus() {
+        if(!prepared)return "Play a song first";
+        if(!bassError.isEmpty())return bassError;
+        try{
+            if(bass==null||!bass.hasControl())return "Bass boost unavailable on this audio output";
+            return bass.getEnabled()?Math.round(bass.getRoundedStrength()/10f)+"%":"Off";
+        }catch(RuntimeException error){return "Bass boost unavailable on this audio output";}
+    }
+    public boolean adjustableBass() {
+        try{return prepared&&bass!=null&&bass.hasControl()&&bass.getStrengthSupported();}
+        catch(RuntimeException error){return false;}
+    }
+    public boolean equalizerPreset(int preset) {
+        if(preset>=0&&preset>=equalizerPresets().length)return false;
+        prefs.edit().putBoolean("eqEnabled",preset>=0).putInt("eqPreset",preset).apply();
+        configureEffects();loadGain();
+        return preset<0||equalizerError.isEmpty();
+    }
+    public boolean setBass(int value) {
+        value=Math.max(0,Math.min(1000,value));
+        if(value>0&&!adjustableBass())return false;
+        prefs.edit().putInt("bass",value).apply();configureEffects();loadGain();
+        return value==0||bassError.isEmpty();
+    }
     public boolean normalization() { return prefs.getBoolean("normalization",false); }
     public void setNormalization(boolean value) { prefs.edit().putBoolean("normalization",value).apply(); loadGain(); }
     private void loadGain() {
         final Song song = getCurrentSong();
         if (song == null || checkpointWriter.isShutdown()) return;
         final boolean enabled = normalization();
+        final int request=++gainGeneration;
         checkpointWriter.execute(() -> {
             float gain = 0;
             if (enabled) try (InputStream in = getContentResolver().openInputStream(song.uri)) { gain = Mp3Metadata.replayGain(in); }
             catch (Exception ignored) { }
             final float db = gain;
             handler.post(() -> {
-                if (getCurrentSong() == null || !song.uri.equals(getCurrentSong().uri)) return;
+                if (request!=gainGeneration||getCurrentSong() == null || !song.uri.equals(getCurrentSong().uri)) return;
                 trackVolume = db < 0 ? (float)Math.pow(10,db/20) : 1f;
                 try {
                     if (prepared && !fading) player.setVolume(trackVolume*duckVolume,trackVolume*duckVolume);
@@ -842,6 +899,8 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
         final int next = (index + 1) % queue.size();
         final MediaPlayer candidate = new MediaPlayer();
         upcoming = candidate; upcomingIndex = next;
+        // Both players feed the same effect chain during crossfade and gapless playback.
+        candidate.setAudioSessionId(player.getAudioSessionId());
         candidate.setAudioAttributes(audioAttributes);
         candidate.setWakeMode(getApplicationContext(), PowerManager.PARTIAL_WAKE_LOCK);
         candidate.setOnPreparedListener(mp -> {

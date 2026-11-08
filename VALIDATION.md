@@ -1,3 +1,15 @@
+# Version 4.0 · Audio effects repair
+
+- Added the normal Android `MODIFY_AUDIO_SETTINGS` permission. Effects now attach after the player is prepared, track its actual nonzero audio session, and reuse that chain when settings change. Preloaded gapless / crossfade players share the active session; promotion retains the chain.
+- Equalizer and bass setters validate platform control / enabled state. Settings show Android's actual preset and rounded bass strength, or an explicit unavailable message. Invalid inputs are bounded / rejected; an unavailable saved preset resets to Off. Newer ReplayGain requests invalidate older asynchronous results.
+- Resource / Java / DEX compilation, APK alignment, production signing, and instrumentation compilation passed. **34 host feature checks passed**.
+- **31 Android effects integration checks passed** on the API 35 emulator. Verified the normal permission, effect/session association, native enabled state and current preset, rounded bass strength, input bounds, paused-state preservation, manual track changes, shared sessions and retained effects across gapless / crossfade, negative ReplayGain attenuation, positive ReplayGain native target gain, disable behavior, and settings status.
+- Native loudness target was confirmed at 300 mB for a synthetic +3 dB tag; the attenuation path used approximately 0.501 for a synthetic -6 dB tag. Test audio and tags are private fixtures, excluded from production. These are API/state checks, not physical measurements of speaker output. Manufacturer devices, Bluetooth routes, and subjective listening still need device testing.
+- The emulator displayed System UI ANR alerts during capture; those previews were omitted. Native effect checks completed successfully. Earlier screenshots and test results below describe their stated versions.
+- APK metadata confirms **Simple Player**, package `simple.music.player`, version **4.0**, code **13**, minimum API **24**, target API **35**.
+- Certificate remains `3fb413c86beccc6627a4c3be5de0a8cb4bfc15715d03ebbf2d02ab85ff037c73`.
+- APK SHA-256: `2093571c1516455c67083ce8a06dcf5c0078620aebc3d74b95d879947c91fb96`.
+
 # Version 3.9 · Remove duplicate queue shortcut
 
 - Removed the Queue icon from the Now Playing action row. The Up Next card and its queue icon still open the queue; the remaining three actions share the row equally.

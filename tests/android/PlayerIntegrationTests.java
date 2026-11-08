@@ -46,7 +46,9 @@ public final class PlayerIntegrationTests extends Instrumentation {
             MainActivity activity = (MainActivity)startActivitySync(new Intent(getTargetContext(),MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             getTargetContext().bindService(new Intent(getTargetContext(),MusicService.class),connection,Context.BIND_AUTO_CREATE);
             waitFor(()->player!=null,"service binds");
-            if (arguments!=null && "lyrics".equals(arguments.getString("phase"))) {
+            if(arguments!=null&&"effects".equals(arguments.getString("phase"))){
+                audioEffects(activity);
+            } else if (arguments!=null && "lyrics".equals(arguments.getString("phase"))) {
                 lyricsPreview(activity);
             } else if (arguments!=null && "identity".equals(arguments.getString("phase"))) {
                 identity(activity);
@@ -131,6 +133,74 @@ public final class PlayerIntegrationTests extends Instrumentation {
     }
     private boolean hasText(View parent,String text){java.util.ArrayList<View> matches=new java.util.ArrayList<>();parent.findViewsWithText(matches,text,View.FIND_VIEWS_WITH_TEXT);return !matches.isEmpty();}
     private View textView(View parent,String text){java.util.ArrayList<View> matches=new java.util.ArrayList<>();parent.findViewsWithText(matches,text,View.FIND_VIEWS_WITH_TEXT);if(matches.isEmpty())throw new AssertionError("Missing "+text);return matches.get(0);}
+    private Object serviceField(String name) {
+        try{java.lang.reflect.Field field=MusicService.class.getDeclaredField(name);field.setAccessible(true);return field.get(player);}
+        catch(Exception error){throw new AssertionError(error);}
+    }
+    private android.media.audiofx.Equalizer eq(){return (android.media.audiofx.Equalizer)serviceField("equalizer");}
+    private android.media.audiofx.BassBoost bassEffect(){return (android.media.audiofx.BassBoost)serviceField("bass");}
+    private android.media.MediaPlayer media(){return (android.media.MediaPlayer)serviceField("player");}
+    private Song gainFixture(Song source,String name,String gain)throws Exception{
+        ByteArrayOutputStream audio=new ByteArrayOutputStream();
+        try(InputStream in=getTargetContext().getContentResolver().openInputStream(source.uri)){Mp3Metadata.copy(in,audio);}
+        byte[] bytes=audio.toByteArray();int skip=0;
+        if(bytes.length>=10&&bytes[0]=='I'&&bytes[1]=='D'&&bytes[2]=='3')skip=10+((bytes[6]&127)<<21| (bytes[7]&127)<<14 | (bytes[8]&127)<<7 |bytes[9]&127);
+        byte[] text=("\0replaygain_track_gain\0"+gain+" dB").getBytes(java.nio.charset.StandardCharsets.ISO_8859_1);
+        int size=10+text.length;File file=new File(getTargetContext().getFilesDir(),name+".mp3");
+        try(DataOutputStream out=new DataOutputStream(new FileOutputStream(file))){
+            out.write(new byte[]{'I','D','3',3,0,0});out.write(new byte[]{(byte)(size>>21&127),(byte)(size>>14&127),(byte)(size>>7&127),(byte)(size&127)});
+            out.writeBytes("TXXX");out.writeInt(text.length);out.writeShort(0);out.write(text);out.write(bytes,skip,bytes.length-skip);
+        }
+        return new Song(-301,name,"Studio Sessions","Effect tests",-301,18000,1,Uri.fromFile(file));
+    }
+    private void audioEffects(MainActivity activity)throws Exception{
+        check(()->getTargetContext().checkSelfPermission(android.Manifest.permission.MODIFY_AUDIO_SETTINGS)==android.content.pm.PackageManager.PERMISSION_GRANTED,"audio settings permission granted");
+        List<Song> songs=new ArrayList<>(privateFixtures().subList(0,2));
+        runOnMainSync(()->{player.setCrossfade(0);player.setGapless(false);player.setSpeed(1);player.setNormalization(false);player.playQueue(songs,0);});
+        waitFor(()->player.isPlaying()&&player.equalizerPresets().length>0,"equalizer attaches to prepared playback");
+        check(()->(Integer)serviceField("effectsSession")==media().getAudioSessionId()&&media().getAudioSessionId()>0,"effects target the active audio session");
+        check(()->player.equalizerPreset(1),"preset application succeeds");
+        check(()->eq()!=null&&eq().hasControl()&&eq().getEnabled()&&eq().getCurrentPreset()==1,"native equalizer confirms enabled preset");
+        check(()->player.adjustableBass()&&player.setBass(600),"adjustable bass application succeeds");
+        check(()->bassEffect().getEnabled()&&Math.abs(bassEffect().getRoundedStrength()-600)<=100,"native bass confirms nonzero strength");
+        runOnMainSync(player::pause);check(()->player.equalizerPreset(2)&&player.setBass(800)&&!player.isPlaying(),"effects update without resuming paused playback");
+        check(()->eq().getCurrentPreset()==2&&bassEffect().getEnabled(),"changing bass preserves the equalizer");
+        check(()->player.setBass(2000)&&bassEffect().getRoundedStrength()<=1000,"bass upper bound is clamped");
+        check(()->player.setBass(-50)&&!bassEffect().getEnabled(),"negative bass disables safely");
+        check(()->!player.equalizerPreset(999)&&eq().getCurrentPreset()==2,"invalid preset does not replace active settings");
+        runOnMainSync(()->{player.setBass(600);player.next();});
+        waitFor(()->player.isPlaying()&&player.getIndex()==1,"manual track change plays");
+        check(()->eq().getEnabled()&&eq().getCurrentPreset()==2&&bassEffect().getEnabled(),"effects survive player reset and next track");
+        runOnMainSync(()->{player.setGapless(true);player.playQueue(songs,0);});
+        waitFor(()->player.isPlaying()&&(Boolean)serviceField("upcomingReady"),"gapless candidate prepares");
+        check(()->((android.media.MediaPlayer)serviceField("upcoming")).getAudioSessionId()==media().getAudioSessionId(),"gapless candidate shares effects session");
+        android.media.audiofx.Equalizer shared=eq();
+        runOnMainSync(()->player.seekTo(player.getDuration()-1200));waitFor(()->player.getIndex()==1&&player.isPlaying(),"gapless transition plays");
+        check(()->eq()==shared&&eq().getEnabled()&&bassEffect().getEnabled(),"gapless promotion retains active effect chain");
+        runOnMainSync(()->{player.setCrossfade(3);player.playQueue(songs,0);});
+        waitFor(()->player.isPlaying()&&(Boolean)serviceField("upcomingReady"),"crossfade candidate prepares");
+        check(()->((android.media.MediaPlayer)serviceField("upcoming")).getAudioSessionId()==media().getAudioSessionId(),"crossfade candidate shares effects session");
+        runOnMainSync(()->player.seekTo(player.getDuration()-4000));
+        waitFor(()->(Boolean)serviceField("fading"),"crossfade starts");
+        check(()->eq().getEnabled()&&bassEffect().getEnabled(),"effects remain enabled during crossfade");
+        waitFor(()->player.getIndex()==1,"crossfade promotion completes");
+        check(()->eq().getEnabled()&&eq().getCurrentPreset()==2&&bassEffect().getEnabled(),"crossfade preserves effect settings");
+        Song negative=gainFixture(songs.get(0),"Negative gain","-6"),positive=gainFixture(songs.get(1),"Positive gain","3");
+        runOnMainSync(()->{player.setCrossfade(0);player.setGapless(false);player.setNormalization(true);player.playQueue(Arrays.asList(negative,positive),0);});
+        waitFor(()->player.isPlaying()&&Math.abs((Float)serviceField("trackVolume")-.501f)<.02f,"negative ReplayGain attenuates player volume");
+        runOnMainSync(()->player.playAt(1));
+        waitFor(()->player.isPlaying()&&serviceField("loudness")!=null&&((android.media.audiofx.LoudnessEnhancer)serviceField("loudness")).getEnabled(),"positive ReplayGain enables loudness effect");
+        check(()->((android.media.audiofx.LoudnessEnhancer)serviceField("loudness")).getTargetGain()==300,"positive ReplayGain uses millibel target");
+        runOnMainSync(()->player.setNormalization(false));
+        waitFor(()->!((android.media.audiofx.LoudnessEnhancer)serviceField("loudness")).getEnabled()&&(Float)serviceField("trackVolume")==1f,"disabling ReplayGain restores volume");
+        runOnMainSync(()->{player.pause();player.equalizerPreset(-1);player.setBass(0);});
+        check(()->!eq().getEnabled()&&!bassEffect().getEnabled()&&!player.isPlaying(),"off disables native effects without starting audio");
+        runOnMainSync(()->{player.equalizerPreset(2);player.setBass(600);activity.showSoundSettings();});
+        check(()->hasText((View)field(activity,"settingsScreen"),player.equalizerStatus()),"settings show actual equalizer state");
+        capture("preview-audio-effects.png");
+        runOnMainSync(()->{activity.closeSettings();activity.showCover();invoke(activity,"showNowPlaying");});capture("preview-player-icons.png");
+        runOnMainSync(()->{player.equalizerPreset(-1);player.setBass(0);player.setGapless(true);});
+    }
     private void lyricsPreview(MainActivity activity) throws Exception {
         List<Song> songs=privateFixtures();Song a=songs.get(0),b=songs.get(1);
         String lrc="[ar:Studio Sessions]\n[00:00.00]A little light across the room\n[00:02.00]We let the quiet carry through\n[00:04.00]Gold on the edge of something new\n[00:06.00]And all the roads are leading home\n[00:10.00]The night turns into morning blue\n[00:14.00]One final note to follow through";

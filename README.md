@@ -4,6 +4,14 @@ A native local-music player for Android 7.0 (API 24) or newer. Playback and save
 
 [Download Simple Player](<dist/Simple Player.apk>) · [Lyrics preview](docs/screenshots/now-playing-lyrics-v3.6.png) · [Theme previews](docs/THEMES.md)
 
+## Version 4.0 · Audio effects repair
+
+- Added Android's normal `MODIFY_AUDIO_SETTINGS` permission and attach effects after playback has a prepared audio session.
+- Equalizer presets and bass settings apply to the active session without rebuilding the entire effect chain for every adjustment. Gapless and crossfade players share that session so effects remain attached through transitions.
+- Sound settings show the effect state reported by Android and explain when an effect is unavailable. Unsupported controls no longer silently save a strength that was never applied. Bass inputs are bounded to 0–1000; saved equalizer presets that do not exist on the current device reset to Off.
+- ReplayGain ignores stale asynchronous results after newer adjustments. Tracks still need embedded ReplayGain tags for normalization; devices must support the requested native effect.
+- Version **4.0**, code **13**; app name, package `simple.music.player`, and signing identity unchanged.
+
 ## Version 3.9 · One queue shortcut
 
 - Removed the duplicate Queue action from the Now Playing icon row. Open the queue from the Up Next card or its queue icon.

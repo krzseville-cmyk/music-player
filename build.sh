@@ -9,7 +9,7 @@ mkdir -p "$out/gen" "$out/classes" "$out/dex"
 find "$out/gen" "$out/classes" "$out/dex" -type f -delete
 "$tools/aapt2" compile --dir res -o "$out/res.zip"
 "$tools/aapt2" link -o "$out/unsigned.apk" -I "$platform" --manifest AndroidManifest.xml --java "$out/gen" \
-  --min-sdk-version 24 --target-sdk-version 35 --version-code 12 --version-name 3.9 "$out/res.zip"
+  --min-sdk-version 24 --target-sdk-version 35 --version-code 13 --version-name 4.0 "$out/res.zip"
 find src "$out/gen" -name '*.java' > "$out/sources.txt"
 javac -source 8 -target 8 -bootclasspath "$platform:$tools/core-lambda-stubs.jar" -encoding UTF-8 -Xlint:-options -d "$out/classes" @"$out/sources.txt"
 jar cf "$out/classes.jar" -C "$out/classes" .
