@@ -1,0 +1,80 @@
+<resources>
+    <style name="MusicTheme.Ember" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/ember_background</item>
+        <item name="android:colorBackground">@color/ember_surface</item>
+        <item name="android:colorAccent">@color/ember_accent</item>
+        <item name="android:colorControlActivated">@color/ember_accent</item>
+        <item name="android:colorControlNormal">@color/ember_muted</item>
+        <item name="android:colorControlHighlight">@color/ember_ripple</item>
+        <item name="android:colorButtonNormal">@color/ember_surface_raised</item>
+        <item name="android:textColorPrimary">@color/ember_text</item>
+        <item name="android:textColorSecondary">@color/ember_muted</item>
+        <item name="android:textColorHint">@color/ember_muted</item>
+        <item name="android:textColorLink">@color/ember_text</item>
+    </style>
+    <style name="MusicTheme.Purple" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/purple_background</item>
+        <item name="android:colorBackground">@color/purple_surface</item>
+        <item name="android:colorAccent">@color/purple_accent</item>
+        <item name="android:colorControlActivated">@color/purple_accent</item>
+        <item name="android:colorControlNormal">@color/purple_muted</item>
+        <item name="android:colorControlHighlight">@color/purple_ripple</item>
+        <item name="android:colorButtonNormal">@color/purple_surface_raised</item>
+        <item name="android:textColorPrimary">@color/purple_text</item>
+        <item name="android:textColorSecondary">@color/purple_muted</item>
+        <item name="android:textColorHint">@color/purple_muted</item>
+        <item name="android:textColorLink">@color/purple_text</item>
+    </style>
+    <style name="MusicTheme.Light" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/light_background</item>
+        <item name="android:colorBackground">@color/light_surface</item>
+        <item name="android:colorAccent">@color/light_accent</item>
+        <item name="android:colorControlActivated">@color/light_accent</item>
+        <item name="android:colorControlNormal">@color/light_muted</item>
+        <item name="android:colorControlHighlight">@color/light_ripple</item>
+        <item name="android:colorButtonNormal">@color/light_surface_raised</item>
+        <item name="android:textColorPrimary">@color/light_text</item>
+        <item name="android:textColorSecondary">@color/light_muted</item>
+        <item name="android:textColorHint">@color/light_muted</item>
+        <item name="android:textColorLink">@color/light_text</item>
+    </style>
+    <style name="MusicDialog.Ember" parent="android:style/Theme.Material.Dialog.Alert">
+        <item name="android:windowBackground">@color/ember_surface</item>
+        <item name="android:colorBackground">@color/ember_surface</item>
+        <item name="android:colorAccent">@color/ember_accent</item>
+        <item name="android:colorControlActivated">@color/ember_accent</item>
+        <item name="android:colorControlNormal">@color/ember_muted</item>
+        <item name="android:colorControlHighlight">@color/ember_ripple</item>
+        <item name="android:colorButtonNormal">@color/ember_surface_raised</item>
+        <item name="android:textColorPrimary">@color/ember_text</item>
+        <item name="android:textColorSecondary">@color/ember_muted</item>
+        <item name="android:textColorHint">@color/ember_muted</item>
+        <item name="android:textColorLink">@color/ember_text</item>
+    </style>
+    <style name="MusicDialog.Purple" parent="android:style/Theme.Material.Dialog.Alert">
+        <item name="android:windowBackground">@color/purple_surface</item>
+        <item name="android:colorBackground">@color/purple_surface</item>
+        <item name="android:colorAccent">@color/purple_accent</item>
+        <item name="android:colorControlActivated">@color/purple_accent</item>
+        <item name="android:colorControlNormal">@color/purple_muted</item>
+        <item name="android:colorControlHighlight">@color/purple_ripple</item>
+        <item name="android:colorButtonNormal">@color/purple_surface_raised</item>
+        <item name="android:textColorPrimary">@color/purple_text</item>
+        <item name="android:textColorSecondary">@color/purple_muted</item>
+        <item name="android:textColorHint">@color/purple_muted</item>
+        <item name="android:textColorLink">@color/purple_text</item>
+    </style>
+    <style name="MusicDialog.Light" parent="android:style/Theme.Material.Light.Dialog.Alert">
+        <item name="android:windowBackground">@color/light_surface</item>
+        <item name="android:colorBackground">@color/light_surface</item>
+        <item name="android:colorAccent">@color/light_accent</item>
+        <item name="android:colorControlActivated">@color/light_accent</item>
+        <item name="android:colorControlNormal">@color/light_muted</item>
+        <item name="android:colorControlHighlight">@color/light_ripple</item>
+        <item name="android:colorButtonNormal">@color/light_surface_raised</item>
+        <item name="android:textColorPrimary">@color/light_text</item>
+        <item name="android:textColorSecondary">@color/light_muted</item>
+        <item name="android:textColorHint">@color/light_muted</item>
+        <item name="android:textColorLink">@color/light_text</item>
+    </style>
+</resources>
